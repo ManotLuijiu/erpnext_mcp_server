@@ -9,6 +9,11 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.
+    "mcp[cli]",
+    "python-dotenv",
+    "openai",
+    "ipykernel",
+    "httpx"
 ]
 
 [build-system]

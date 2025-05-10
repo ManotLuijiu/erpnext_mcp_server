@@ -1,0 +1,48 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2025-05-06 00:36:09.802460",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [],
+    "fields": [
+        {
+            "fieldname": "regulation_type",
+            "label": "Type",
+            "fieldtype": "Select",
+            "options": "Law\nDepartmental Regulation\nDepartmental Notification\nRoyal Decree\nDirector-General Notification\nMinisterial Regulation\nOther",
+            "reqd": 1
+        },
+        {
+            "fieldname": "reference",
+            "label": "Reference",
+            "fieldtype": "Data",
+            "reqd": 1
+        },
+        {
+            "fieldname": "description",
+            "label": "Description",
+            "fieldtype": "Small Text"
+        },
+        {
+            "fieldname": "url",
+            "label": "URL",
+            "fieldtype": "Data"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "istable": 1,
+    "links": [],
+    "modified": "2025-05-06 00:36:09.802460",
+    "modified_by": "Administrator",
+    "module": "ERPNext MCP Server",
+    "name": "Thai Tax Law Related Regulation",
+    "owner": "Administrator",
+    "permissions": [],
+    "row_format": "Dynamic",
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
+}

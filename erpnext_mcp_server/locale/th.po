@@ -1,0 +1,411 @@
+# Thai translations for ERPNext MCP Server.
+# Copyright (C) 2025 Manot Luijiu
+# This file is distributed under the same license as the ERPNext MCP Server project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ERPNext MCP Server VERSION\n"
+"Report-Msgid-Bugs-To: moocoding@gmail.com\n"
+"POT-Creation-Date: 2025-05-06 16:06+0642\n"
+"PO-Revision-Date: 2025-05-06 16:44\n"
+"Last-Translator: moocoding@gmail.com\n"
+"Language-Team: moocoding@gmail.com\n"
+"Language: th\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Generated-By: Babel 2.13.1\n"
+
+#. Name of a role
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Accounts Manager"
+msgstr "ผู้จัดการบัญชี"
+
+#. Name of a role
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "All"
+msgstr "ทั้งหมด"
+
+#. Description of the 'Summary' (Small Text) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Brief summary of this tax law section"
+msgstr "สรุปกฎหมายภาษีในส่วนนี้"
+
+#. Label of a Text Editor field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Calculation Example"
+msgstr "ตัวอย่างการคำนวณ"
+
+#. Label of a Code field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Calculation Formula"
+msgstr "สูตรการคำนวณ"
+
+#. Label of a Section Break field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Category"
+msgstr "หมวดหมู่"
+
+#. Label of a Section Break field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Content"
+msgstr "เนื้อหา"
+
+#. Label of a Text Editor field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Content (English)"
+msgstr "เนื้อหา (ภาษาอังกฤษ)"
+
+#. Label of a Text Editor field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Content (Thai)"
+msgstr "เนื้อหา (ภาษาไทย)"
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Corporate Income Tax"
+msgstr "ภาษีเงินได้นิติบุคคล"
+
+#. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
+#. Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Departmental Notification"
+msgstr "แจ้งเตือนเป็นรายแผนก"
+
+#. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
+#. Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Departmental Regulation"
+msgstr "ข้อกำหนดของแต่ละแผนก"
+
+#. Label of a Small Text field in DocType 'Thai Tax Law Related Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Description"
+msgstr "รายละเอียด"
+
+#. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
+#. Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Director-General Notification"
+msgstr "การแจ้งเตือนจาก ผู้อำนวยการ"
+
+#. Label of a Date field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Effective Date"
+msgstr "วันที่ มีผลบังคับใช้"
+
+#. Label of a Date field in DocType 'Thai Tax Rate'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_rate/thai_tax_rate.json
+msgid "Effective From"
+msgstr "มีผลจากวันที่"
+
+#. Label of a Date field in DocType 'Thai Tax Rate'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_rate/thai_tax_rate.json
+msgid "Effective To"
+msgstr "มีผลถึงวันที่"
+
+#. Description of the 'Content (English)' (Text Editor) field in DocType 'Thai
+#. Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "English translation of the tax law"
+msgstr "แปลกฏหมายภาษีไทยให้เป็นภาษาอังกฤษ"
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Exemptions"
+msgstr "ยกเว้น"
+
+#. Label of a Date field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Expiry Date"
+msgstr "วันหมดอายุ"
+
+#. Option for the 'Status' (Select) field in DocType 'Tax Law Update Log'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+msgid "Failed"
+msgstr "ไม่สำเร็จ"
+
+#. Description of the 'Content (Thai)' (Text Editor) field in DocType 'Thai
+#. Tax
+#. Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Full content of the tax law in Thai"
+msgstr ""
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "General"
+msgstr "ทั่วไป"
+
+#. Label of a Check field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Has Calculation Formula"
+msgstr ""
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "International Taxation"
+msgstr ""
+
+#. Label of a Check field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Is Active"
+msgstr "กำลังใช้งาน"
+
+#. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
+#. Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Law"
+msgstr "กฎหมาย"
+
+#. Label of a Data field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Legal Reference"
+msgstr "กฎหมายที่ใช้อ้างอิง"
+
+#. Label of a Code field in DocType 'Tax Law Update Log'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+msgid "Log Details"
+msgstr ""
+
+#. Label of a Currency field in DocType 'Thai Tax Rate'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_rate/thai_tax_rate.json
+msgid "Max Amount"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Metadata"
+msgstr ""
+
+#. Label of a Currency field in DocType 'Thai Tax Rate'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_rate/thai_tax_rate.json
+msgid "Min Amount"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
+#. Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Ministerial Regulation"
+msgstr ""
+
+#. Label of a Small Text field in DocType 'Thai Tax Rate'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_rate/thai_tax_rate.json
+msgid "Notes"
+msgstr ""
+
+#. Description of the 'Legal Reference' (Data) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Official reference number (e.g., Section 40 of Revenue Code)"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
+#. Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Other"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Tax Law Update Log'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+msgid "Partial Success"
+msgstr ""
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Personal Income Tax"
+msgstr ""
+
+#. Description of the 'Calculation Formula' (Code) field in DocType 'Thai Tax
+#. Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Python code for tax calculation"
+msgstr ""
+
+#. Label of a Percent field in DocType 'Thai Tax Rate'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_rate/thai_tax_rate.json
+msgid "Rate (%)"
+msgstr ""
+
+#. Label of a Data field in DocType 'Thai Tax Law Related Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Reference"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "References"
+msgstr ""
+
+#. Label of a Table field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Related Regulations"
+msgstr ""
+
+#. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
+#. Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Royal Decree"
+msgstr ""
+
+#. Label of a Data field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Section Code"
+msgstr ""
+
+#. Label of a Int field in DocType 'Tax Law Update Log'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+msgid "Sections Added"
+msgstr ""
+
+#. Label of a Int field in DocType 'Tax Law Update Log'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+msgid "Sections Updated"
+msgstr ""
+
+#. Label of a Data field in DocType 'Tax Law Update Log'
+#. Label of a Data field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Source URL"
+msgstr ""
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Specific Business Tax"
+msgstr ""
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Stamp Duty"
+msgstr ""
+
+#. Label of a Select field in DocType 'Tax Law Update Log'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+msgid "Status"
+msgstr ""
+
+#. Label of a Data field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Subcategory"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'Tax Law Update Log'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+msgid "Success"
+msgstr ""
+
+#. Label of a Small Text field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Summary"
+msgstr ""
+
+#. Name of a role
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "System Manager"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Tax Calculation"
+msgstr ""
+
+#. Label of a Select field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Tax Category"
+msgstr ""
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Tax Credits"
+msgstr ""
+
+#. Name of a DocType
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+msgid "Tax Law Update Log"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Thai Tax Law'
+#. Label of a Table field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Tax Rates"
+msgstr ""
+
+#. Name of a DocType
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Thai Tax Law"
+msgstr ""
+
+#. Name of a DocType
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Thai Tax Law Related Regulation"
+msgstr ""
+
+#. Name of a DocType
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_rate/thai_tax_rate.json
+msgid "Thai Tax Rate"
+msgstr ""
+
+#. Label of a Data field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Title"
+msgstr ""
+
+#. Description of the 'Title' (Data) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Title of the tax law section"
+msgstr ""
+
+#. Label of a Select field in DocType 'Thai Tax Law Related Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "Type"
+msgstr ""
+
+#. Label of a Data field in DocType 'Thai Tax Law Related Regulation'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
+msgid "URL"
+msgstr ""
+
+#. Description of the 'Source URL' (Data) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "URL to the official source"
+msgstr ""
+
+#. Description of the 'Section Code' (Data) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Unique code for this tax law section (e.g., PIT-001)"
+msgstr ""
+
+#. Label of a Datetime field in DocType 'Tax Law Update Log'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
+msgid "Update Date"
+msgstr ""
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Value Added Tax"
+msgstr ""
+
+#. Label of a Long Text field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Vector Embedding"
+msgstr ""
+
+#. Label of a Section Break field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Vector Embeddings"
+msgstr ""
+
+#. Description of the 'Vector Embedding' (Long Text) field in DocType 'Thai
+#. Tax
+#. Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Vector embedding of the content for semantic search"
+msgstr ""
+
+#. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
+#: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
+msgid "Withholding Tax"
+msgstr ""

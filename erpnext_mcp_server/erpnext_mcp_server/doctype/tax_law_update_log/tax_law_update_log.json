@@ -1,0 +1,70 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2025-05-06 00:50:31.463264",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [],
+    "fields": [
+        {
+            "fieldname": "update_date",
+            "label": "Update Date",
+            "fieldtype": "Datetime",
+            "reqd": 1
+        },
+        {
+            "fieldname": "source_url",
+            "label": "Source URL",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "sections_updated",
+            "label": "Sections Updated",
+            "fieldtype": "Int"
+        },
+        {
+            "fieldname": "sections_added",
+            "label": "Sections Added",
+            "fieldtype": "Int"
+        },
+        {
+            "fieldname": "status",
+            "label": "Status",
+            "fieldtype": "Select",
+            "options": "Success\nPartial Success\nFailed",
+            "reqd": 1
+        },
+        {
+            "fieldname": "log_details",
+            "label": "Log Details",
+            "fieldtype": "Code",
+            "options": "JSON"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2025-05-06 00:50:31.463264",
+    "modified_by": "Administrator",
+    "module": "ERPNext MCP Server",
+    "name": "Tax Law Update Log",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "row_format": "Dynamic",
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
+}

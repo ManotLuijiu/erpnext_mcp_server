@@ -1,0 +1,200 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2025-05-06 00:29:12.648167",
+    "doctype": "DocType",
+    "naming_rule": "By fieldname",
+    "autoname": "field:section_code",
+    "engine": "InnoDB",
+    "field_order": [],
+    "fields": [
+        {
+            "fieldname": "section_code",
+            "label": "Section Code",
+            "fieldtype": "Data",
+            "reqd": 1,
+            "unique": 1,
+            "description": "Unique code for this tax law section (e.g., PIT-001)"
+        },
+        {
+            "fieldname": "title",
+            "label": "Title",
+            "fieldtype": "Data",
+            "reqd": 1,
+            "description": "Title of the tax law section"
+        },
+        {
+            "fieldname": "category_section",
+            "label": "Category",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "category",
+            "label": "Tax Category",
+            "fieldtype": "Select",
+            "options": "Personal Income Tax\nCorporate Income Tax\nValue Added Tax\nWithholding Tax\nSpecific Business Tax\nStamp Duty\nGeneral\nExemptions\nTax Credits\nInternational Taxation",
+            "reqd": 1
+        },
+        {
+            "fieldname": "subcategory",
+            "label": "Subcategory",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "content_section",
+            "label": "Content",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "summary",
+            "label": "Summary",
+            "fieldtype": "Small Text",
+            "reqd": 1,
+            "description": "Brief summary of this tax law section"
+        },
+        {
+            "fieldname": "content_th",
+            "label": "Content (Thai)",
+            "fieldtype": "Text Editor",
+            "reqd": 1,
+            "description": "Full content of the tax law in Thai"
+        },
+        {
+            "fieldname": "content_en",
+            "label": "Content (English)",
+            "fieldtype": "Text Editor",
+            "description": "English translation of the tax law"
+        },
+        {
+            "fieldname": "metadata_section",
+            "label": "Metadata",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "effective_date",
+            "label": "Effective Date",
+            "fieldtype": "Date",
+            "reqd": 1
+        },
+        {
+            "fieldname": "expiry_date",
+            "label": "Expiry Date",
+            "fieldtype": "Date"
+        },
+        {
+            "fieldname": "is_active",
+            "label": "Is Active",
+            "fieldtype": "Check",
+            "default": 1
+        },
+        {
+            "fieldname": "reference_section",
+            "label": "References",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "legal_reference",
+            "label": "Legal Reference",
+            "fieldtype": "Data",
+            "description": "Official reference number (e.g., Section 40 of Revenue Code)"
+        },
+        {
+            "fieldname": "source_url",
+            "label": "Source URL",
+            "fieldtype": "Data",
+            "description": "URL to the official source"
+        },
+        {
+            "fieldname": "related_regulations",
+            "label": "Related Regulations",
+            "fieldtype": "Table",
+            "options": "Thai Tax Law Related Regulation"
+        },
+        {
+            "fieldname": "calculation_section",
+            "label": "Tax Calculation",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "has_calculation",
+            "label": "Has Calculation Formula",
+            "fieldtype": "Check",
+            "default": 0
+        },
+        {
+            "fieldname": "calculation_formula",
+            "label": "Calculation Formula",
+            "fieldtype": "Code",
+            "options": "Python",
+            "depends_on": "eval:doc.has_calculation==1",
+            "description": "Python code for tax calculation"
+        },
+        {
+            "fieldname": "calculation_example",
+            "label": "Calculation Example",
+            "fieldtype": "Text Editor",
+            "depends_on": "eval:doc.has_calculation==1"
+        },
+        {
+            "fieldname": "rates_section",
+            "label": "Tax Rates",
+            "fieldtype": "Section Break",
+            "depends_on": "eval:doc.category=='Personal Income Tax' || doc.category=='Corporate Income Tax' || doc.category=='Value Added Tax' || doc.category=='Withholding Tax'"
+        },
+        {
+            "fieldname": "tax_rates",
+            "label": "Tax Rates",
+            "fieldtype": "Table",
+            "options": "Thai Tax Rate"
+        },
+        {
+            "fieldname": "embedding_section",
+            "label": "Vector Embeddings",
+            "fieldtype": "Section Break",
+            "hidden": 1
+        },
+        {
+            "fieldname": "vector_embedding",
+            "label": "Vector Embedding",
+            "fieldtype": "Long Text",
+            "hidden": 1,
+            "description": "Vector embedding of the content for semantic search"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2025-05-06 00:29:12.648167",
+    "modified_by": "Administrator",
+    "module": "ERPNext MCP Server",
+    "name": "Thai Tax Law",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "role": "Accounts Manager",
+            "read": 1,
+            "write": 1,
+            "create": 1
+        },
+        {
+            "role": "All",
+            "read": 1
+        }
+    ],
+    "row_format": "Dynamic",
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
+}
