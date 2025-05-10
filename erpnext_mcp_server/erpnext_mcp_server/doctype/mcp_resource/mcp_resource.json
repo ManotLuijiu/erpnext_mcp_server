@@ -1,0 +1,82 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "creation": "2025-05-10 20:42:46.871805",
+  "doctype": "DocType",
+  "naming_rule": "Random",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "uri",
+    "resource_name",
+    "description",
+    "column_break_3",
+    "mime_type",
+    "enabled",
+    "last_accessed",
+    "access_count"
+  ],
+  "fields": [
+    {
+      "fieldname": "uri",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "URI",
+      "reqd": 1
+    },
+    {
+      "fieldname": "resource_name",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Resource Name"
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Text",
+      "in_list_view": 1,
+      "label": "Description"
+    },
+    {
+      "fieldname": "mime_type",
+      "fieldtype": "Data",
+      "label": "MIME Type"
+    },
+    {
+      "default": "1",
+      "fieldname": "enabled",
+      "fieldtype": "Check",
+      "in_list_view": 1,
+      "label": "Enabled"
+    },
+    {
+      "fieldname": "last_accessed",
+      "fieldtype": "Datetime",
+      "label": "Last Accessed"
+    },
+    {
+      "default": "0",
+      "fieldname": "access_count",
+      "fieldtype": "Int",
+      "label": "Access Count"
+    },
+    {
+      "fieldname": "column_break_3",
+      "fieldtype": "Column Break"
+    }
+  ],
+  "grid_page_length": 50,
+  "index_web_pages_for_search": 1,
+  "istable": 1,
+  "links": [],
+  "modified": "2025-05-10 20:42:46.871805",
+  "modified_by": "Administrator",
+  "module": "ERPNext MCP Server",
+  "name": "MCP Resource",
+  "owner": "Administrator",
+  "permissions": [],
+  "row_format": "Dynamic",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "states": []
+}

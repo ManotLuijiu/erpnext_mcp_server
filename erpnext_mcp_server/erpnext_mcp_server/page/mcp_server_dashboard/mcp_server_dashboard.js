@@ -394,10 +394,13 @@ class MCPServerDashboard {
       me.stop_mcp_server()
     })
     this.page.add_inner_button(__('Restart MCP Server'), function () {
-      me.refresh_status()
+      me.restart_mcp_server()
     })
     this.page.add_inner_button(__('Settings'), function () {
       frappe.set_route('List', 'MCP Server Settings')
+    })
+    this.page.add_inner_button(__('Server Logs'), function () {
+      me.show_server_logs()
     })
   }
 
@@ -405,13 +408,35 @@ class MCPServerDashboard {
     this.refresh_status()
   }
 
+  // start_status_refresh() {
+  //   // Refresh status every 10 seconds
+  //   const me = this
+  //   setInterval(function () {
+  //     me.refresh_status()
+  //   }, 10000)
+  // }
+
   start_status_refresh() {
     // Refresh status every 10 seconds
     const me = this
-    setInterval(function () {
+    this.status_interval = setInterval(function () {
       me.refresh_status()
     }, 10000)
   }
+
+  // refresh_status() {
+  //   const me = this
+  //   frappe.call({
+  //     method: 'erpnext_mcp_server.api.mcp_server.get_mcp_server_status',
+  //     callback: function (r) {
+  //       if (r.message) {
+  //         me.update_status_display(r.message)
+  //       } else {
+  //         frappe.msgprint(__('Failed to restart MCP server'))
+  //       }
+  //     },
+  //   })
+  // }
 
   refresh_status() {
     const me = this
@@ -421,8 +446,17 @@ class MCPServerDashboard {
         if (r.message) {
           me.update_status_display(r.message)
         } else {
-          frappe.msgprint(__('Failed to restart MCP server'))
+          console.error('Failed to get MCP server status')
         }
+      },
+      error: function (r) {
+        console.error('Error getting MCP server status:', r)
+        // Show error indicator
+        me.update_status_display({
+          status: 'Error',
+          is_running: false,
+          last_error: 'Failed to get server status',
+        })
       },
     })
   }
@@ -439,21 +473,27 @@ class MCPServerDashboard {
 
     // Clear existing classes and set new one
     status_indicator.removeClass(
-      'indicator-green indicator-red indicator-orange indicator-blue',
+      'indicator-green indicator-red indicator-orange indicator-blue dark',
     )
 
-    if (data.status === 'Running') {
-      status_indicator.addClass('indicator-green')
-      status_text.text('Running')
-    } else if (data.status === 'Starting') {
+    const isDarkTheme =
+      document.documentElement.getAttribute('data-theme') === 'dark'
+
+    // Use the status directly from data object, with fallback logic
+    const status = data.status || (data.is_running ? 'Running' : 'Stopped')
+
+    if (status === 'Running') {
+      status_indicator.addClass(`indicator-green${isDarkTheme ? ' dark' : ''}`)
+      status_text.text('Running').css('color', '#28a745')
+    } else if (status === 'Starting') {
       status_indicator.addClass('indicator-blue')
-      status_text.text('Starting')
-    } else if (data.status === 'Error') {
+      status_text.text('Starting').css('color', '#007bff')
+    } else if (status === 'Error') {
       status_indicator.addClass('indicator-red')
-      status_text.text('Error')
+      status_text.text('Error').css('color', '#dc3545')
     } else {
       status_indicator.addClass('indicator-orange')
-      status_text.text('Stopped')
+      status_text.text('Stopped').css('color', '#fd7e14')
     }
 
     // Update other fields
@@ -464,15 +504,25 @@ class MCPServerDashboard {
 
     if (data.last_error) {
       error_log.text(data.last_error)
-      $('.mcp-error-section').show()
+      $('.mcp-error-section').slideDown()
     } else {
       error_log.text('No errors reported.')
-      $('.mcp-error-section').hide()
+      $('.mcp-error-section').slideUp()
     }
   }
 
   start_mcp_server() {
     const me = this
+
+    // Show loading indicator
+    frappe.show_alert(
+      {
+        message: __('Starting MCP server...'),
+        indicator: 'blue',
+      },
+      3,
+    )
+
     frappe.call({
       method: 'erpnext_mcp_server.api.mcp_server.start_mcp_server',
       callback: function (r) {
@@ -500,18 +550,28 @@ class MCPServerDashboard {
           frappe.msgprint(__('Failed to start MCP server'))
         }
       },
+      error: function (r) {
+        console.error('Error starting MCP server:', r)
+        frappe.show_alert(
+          {
+            message: __('Failed to start MCP server'),
+            indicator: 'red',
+          },
+          5,
+        )
+      },
     })
   }
 
-  stop_server() {
+  stop_mcp_server() {
     const me = this
+
     frappe.confirm(
       __('Are you sure you want to stop the MCP Server?'),
       function () {
         // Yes
         frappe.call({
-          method:
-            'erpnext_mcp_server.erpnext_mcp_server.api.mcp_server.stop_server',
+          method: 'erpnext_mcp_server.api.mcp_server.stop_mcp_server',
           callback: function (r) {
             if (r.message) {
               if (r.message.status === 'success') {
@@ -536,11 +596,121 @@ class MCPServerDashboard {
               }
             }
           },
+          error: function (r) {
+            frappe.show_alert(
+              {
+                message: __('Failed to stop MCP server'),
+                indicator: 'red',
+              },
+              5,
+            )
+            console.error('Error stopping MCP server:', r)
+          },
         })
       },
       function () {
         // No - do nothing
       },
     )
+  }
+
+  restart_mcp_server() {
+    const me = this
+
+    frappe.confirm(
+      __('Are you sure you want to restart the MCP Server?'),
+      function () {
+        me.stop_mcp_server()
+        setTimeout(() => {
+          me.start_mcp_server()
+        }, 2000)
+      },
+    )
+  }
+
+  show_server_logs() {
+    const me = this
+
+    // Create a dialog to show server logs
+    const dialog = new frappe.ui.Dialog({
+      title: __('MCP Server Logs'),
+      size: 'extra-large',
+      fields: [
+        {
+          fieldtype: 'Code',
+          fieldname: 'logs',
+          label: __('Logs'),
+          options: 'Text',
+          default: __('Loading logs...'),
+          read_only: 1,
+        },
+      ],
+      primary_action_label: __('Refresh'),
+      primary_action: function () {
+        me.refresh_logs(dialog)
+      },
+    })
+
+    dialog.show()
+
+    // Load initial logs
+    this.refresh_logs(dialog)
+  }
+
+  refresh_logs(dialog) {
+    frappe.call({
+      method: 'erpnext_mcp_server.api.mcp_server.get_mcp_server_logs',
+      callback: function (r) {
+        if (r.message) {
+          dialog.set_value('logs', r.message)
+        } else {
+          dialog.set_value('logs', __('No logs available'))
+        }
+      },
+      error: function (r) {
+        console.error('Error loading logs:', r)
+        dialog.set_value('logs', __('Error loading logs'))
+      },
+    })
+  }
+
+  // Cleanup when page is destroyed
+  destroy() {
+    if (this.status_interval) {
+      clearInterval(this.status_interval)
+    }
+    $('.theme-toggle-btn').remove()
+    $('#mcp-dashboard-theme-styles').remove()
+  }
+}
+
+// Ensure theme toggle is cleaned up when navigating away
+frappe.pages['mcp-server-dashboard'].on_page_hide = function () {
+  $('.theme-toggle-btn').remove()
+  $('#mcp-dashboard-theme-styles').remove()
+}
+
+// Store a reference to the dashboard instance for cleanup
+frappe.pages['mcp-server-dashboard'].dashboard = null
+
+frappe.pages['mcp-server-dashboard'].on_page_show = function (wrapper) {
+  if (!frappe.pages['mcp-server-dashboard'].dashboard) {
+    const page = frappe.ui.make_app_page({
+      parent: wrapper,
+      title: 'MCP Server Dashboard',
+      single_column: false,
+    })
+
+    $(frappe.render_template('mcp_server_dashboard', {})).appendTo(page.body)
+    frappe.pages['mcp-server-dashboard'].dashboard = new MCPServerDashboard(
+      page,
+    )
+  }
+}
+
+frappe.pages['mcp-server-dashboard'].on_page_hide = function () {
+  if (frappe.pages['mcp-server-dashboard'].dashboard) {
+    frappe.pages['mcp-server-dashboard'].dashboard.destroy()
+    frappe.pages['mcp-server-dashboard'].dashboard = null
   }
 }

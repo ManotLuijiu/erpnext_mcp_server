@@ -1,166 +1,193 @@
 {
-    "actions": [
-        {
-            "action": "Start Server",
-            "action_type": "Server Action",
-            "label": "Start MCP Server"
-        },
-        {
-            "action": "Stop Server",
-            "action_type": "Server Action",
-            "label": "Stop MCP Server"
-        }
-    ],
-    "allow_rename": 1,
-    "creation": "2025-05-09 23:28:00.299180",
-    "doctype": "DocType",
-    "autoname": "MCP-SETTINGS-.#####",
-    "engine": "InnoDB",
-    "field_order": [
-        "enabled_section",
-        "enabled",
-        "status",
-        "process_id",
-        "column_break_4",
-        "last_start_time",
-        "last_stop_time",
-        "configuration_section",
-        "transport",
-        "port",
-        "debug",
-        "column_break_10",
-        "auto_start",
-        "log_level",
-        "server_name",
-        "monitoring_section",
-        "last_error"
-    ],
-    "fields": [
-        {
-            "fieldname": "enabled_section",
-            "fieldtype": "Section Break",
-            "label": "MCP Server Status"
-        },
-        {
-            "default": "0",
-            "fieldname": "enabled",
-            "fieldtype": "Check",
-            "label": "Enable MCP Server"
-        },
-        {
-            "fieldname": "status",
-            "fieldtype": "Select",
-            "label": "Status",
-            "options": "Stopped\nStarting\nRunning\nError",
-            "read_only": 1
-        },
-        {
-            "fieldname": "process_id",
-            "fieldtype": "Data",
-            "label": "Process ID",
-            "read_only": 1
-        },
-        {
-            "fieldname": "column_break_4",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "last_start_time",
-            "fieldtype": "Datetime",
-            "label": "Last Start Time",
-            "read_only": 1
-        },
-        {
-            "fieldname": "last_stop_time",
-            "fieldtype": "Datetime",
-            "label": "Last Stop Time",
-            "read_only": 1
-        },
-        {
-            "fieldname": "configuration_section",
-            "fieldtype": "Section Break",
-            "label": "Server Configuration"
-        },
-        {
-            "default": "stdio",
-            "fieldname": "transport",
-            "fieldtype": "Select",
-            "label": "Transport Protocol",
-            "options": "stdio\nsse"
-        },
-        {
-            "default": "8000",
-            "description": "Only used for SSE transport",
-            "fieldname": "port",
-            "fieldtype": "Int",
-            "label": "Port"
-        },
-        {
-            "default": "0",
-            "fieldname": "debug",
-            "fieldtype": "Check",
-            "label": "Debug Mode"
-        },
-        {
-            "fieldname": "column_break_10",
-            "fieldtype": "Column Break"
-        },
-        {
-            "default": "0",
-            "fieldname": "auto_start",
-            "fieldtype": "Check",
-            "label": "Auto Start with Server"
-        },
-        {
-            "default": "INFO",
-            "fieldname": "log_level",
-            "fieldtype": "Select",
-            "label": "Log Level",
-            "options": "DEBUG\nINFO\nWARNING\nERROR\nCRITICAL"
-        },
-        {
-            "default": "ERPNext MCP Server",
-            "fieldname": "server_name",
-            "fieldtype": "Data",
-            "label": "Server Name"
-        },
-        {
-            "fieldname": "monitoring_section",
-            "fieldtype": "Section Break",
-            "label": "Monitoring"
-        },
-        {
-            "fieldname": "last_error",
-            "fieldtype": "Long Text",
-            "label": "Last Error",
-            "read_only": 1
-        }
-    ],
-    "grid_page_length": 50,
-    "index_web_pages_for_search": 1,
-    "links": [],
-    "modified": "2025-05-09 23:28:00.299180",
-    "modified_by": "Administrator",
-    "module": "ERPNext MCP Server",
-    "name": "MCP Server Settings",
-    "owner": "Administrator",
-    "permissions": [
-        {
-            "create": 1,
-            "delete": 1,
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "System Manager",
-            "share": 1,
-            "write": 1
-        }
-    ],
-    "row_format": "Dynamic",
-    "sort_field": "modified",
-    "sort_order": "DESC",
-    "track_changes": 1,
-    "states": []
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "field:name",
+  "creation": "2025-05-10 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "basic_settings",
+    "enabled",
+    "name_field",
+    "transport",
+    "server_port",
+    "server_settings",
+    "log_level",
+    "max_connections",
+    "timeout",
+    "column_break_8",
+    "api_key",
+    "auth_enabled",
+    "status_section",
+    "process_id",
+    "last_start_time",
+    "last_stop_time",
+    "column_break_14",
+    "last_error",
+    "server_version",
+    "tools_and_resources",
+    "available_tools",
+    "available_resources"
+  ],
+  "fields": [
+    {
+      "default": "Default",
+      "fieldname": "name_field",
+      "fieldtype": "Data",
+      "hidden": 1,
+      "label": "Name"
+    },
+    {
+      "default": "0",
+      "fieldname": "enabled",
+      "fieldtype": "Check",
+      "label": "Enabled"
+    },
+    {
+      "fieldname": "transport",
+      "fieldtype": "Select",
+      "label": "Transport Protocol",
+      "options": "stdio\nhttp\nwebsocket",
+      "default": "stdio"
+    },
+    {
+      "depends_on": "eval:doc.transport!='stdio'",
+      "fieldname": "server_port",
+      "fieldtype": "Int",
+      "label": "Server Port",
+      "default": 3000
+    },
+    {
+      "fieldname": "log_level",
+      "fieldtype": "Select",
+      "label": "Log Level",
+      "options": "DEBUG\nINFO\nWARNING\nERROR",
+      "default": "INFO"
+    },
+    {
+      "fieldname": "max_connections",
+      "fieldtype": "Int",
+      "label": "Max Connections",
+      "default": 10
+    },
+    {
+      "fieldname": "timeout",
+      "fieldtype": "Int",
+      "label": "Connection Timeout (seconds)",
+      "default": 30
+    },
+    {
+      "fieldname": "process_id",
+      "fieldtype": "Int",
+      "label": "Process ID",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_start_time",
+      "fieldtype": "Datetime",
+      "label": "Last Start Time",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_stop_time",
+      "fieldtype": "Datetime",
+      "label": "Last Stop Time",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_error",
+      "fieldtype": "Long Text",
+      "label": "Last Error",
+      "read_only": 1
+    },
+    {
+      "fieldname": "server_version",
+      "fieldtype": "Data",
+      "label": "Server Version",
+      "read_only": 1
+    },
+    {
+      "fieldname": "api_key",
+      "fieldtype": "Password",
+      "label": "API Key"
+    },
+    {
+      "default": "0",
+      "fieldname": "auth_enabled",
+      "fieldtype": "Check",
+      "label": "Enable Authentication"
+    },
+    {
+      "fieldname": "available_tools",
+      "fieldtype": "Table",
+      "label": "Available Tools",
+      "options": "MCP Tool",
+      "read_only": 1
+    },
+    {
+      "fieldname": "available_resources",
+      "fieldtype": "Table",
+      "label": "Available Resources",
+      "options": "MCP Resource",
+      "read_only": 1
+    },
+    {
+      "collapsible": 0,
+      "fieldname": "basic_settings",
+      "fieldtype": "Section Break",
+      "label": "Basic Settings"
+    },
+    {
+      "fieldname": "column_break_8",
+      "fieldtype": "Column Break"
+    },
+    {
+      "collapsible": 0,
+      "fieldname": "status_section",
+      "fieldtype": "Section Break",
+      "label": "Server Status"
+    },
+    {
+      "fieldname": "column_break_14",
+      "fieldtype": "Column Break"
+    },
+    {
+      "collapsible": 0,
+      "fieldname": "tools_and_resources",
+      "fieldtype": "Section Break",
+      "label": "Tools and Resources"
+    },
+    {
+      "collapsible": 0,
+      "fieldname": "server_settings",
+      "fieldtype": "Section Break",
+      "label": "Server Settings"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "issingle": 1,
+  "links": [],
+  "modified": "2025-05-10 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "ERPNext MCP Server",
+  "name": "MCP Server Settings",
+  "naming_rule": "Expression (old style)",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "read": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "title_field": "name_field",
+  "track_changes": 1
 }

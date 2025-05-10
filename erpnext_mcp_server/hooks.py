@@ -54,7 +54,7 @@ website_route_rules = [
 ]
 
 # After site ready
-after_migrate = "erpnext_mcp_server.api.mcp_server.auto_start_server"
+# after_migrate = "erpnext_mcp_server.api.mcp_server.auto_start_server"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/erpnext_mcp_server/css/erpnext_mcp_server.css"
