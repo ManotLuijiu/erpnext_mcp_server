@@ -1,0 +1,98 @@
+<div class="mcp-server-dashboard">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Server Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Status:</label>
+                                <div class="status-display">
+                                    <span id="mcp-status-indicator" class="indicator indicator-orange"></span>
+                                    <span id="mcp-status-text">Stopped</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Process ID:</label>
+                                <div id="mcp-process-id">N/A</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Transport Protocol:</label>
+                                <div id="mcp-transport">stdio</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Last Started:</label>
+                                <div id="mcp-last-start">N/A</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Last Stopped:</label>
+                                <div id="mcp-last-stop">N/A</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mcp-error-section" style="margin-top: 15px; display: none;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Last Error</h5>
+                </div>
+                <div class="card-body">
+                    <pre id="mcp-error-log" style="max-height: 200px; overflow-y: auto;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row" style="margin-top: 15px;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">About MCP Server</h5>
+                </div>
+                <div class="card-body">
+                    <p>The Model Context Protocol (MCP) server allows AI models to interact with ERPNext through a standardized interface. It enables your chat bot to perform operations such as:</p>
+                    <ul>
+                        <li>Querying ERPNext documents (like Sales Invoices, Customers, etc.)</li>
+                        <li>Creating and updating documents</li>
+                        <li>Running reports and analyses</li>
+                        <li>Executing workflows and custom functions</li>
+                    </ul>
+                    <p><strong>Start the server</strong> to enable AI integration with your ERPNext system.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.status-display {
+    display: flex;
+    align-items: center;
+}
+
+.status-display .indicator {
+    margin-right: 5px;
+}
+
+.mcp-server-dashboard .card {
+    margin-bottom: 15px;
+}
+
+.mcp-server-dashboard .form-group {
+    margin-bottom: 10px;
+}
+
+.mcp-server-dashboard label {
+    font-weight: bold;
+}
+</style>

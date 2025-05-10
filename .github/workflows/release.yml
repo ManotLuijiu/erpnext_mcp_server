@@ -8,43 +8,112 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating releases
+      actions: read    # Required for checkout
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # Updated to v4
         with:
+          fetch-depth: 0  # Fetch all history for git-cliff
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Git config
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Install git-cliff
         run: |
-          curl -sSL https://github.com/orhun/git-cliff/releases/latest/download/git-cliff-x86_64-unknown-linux-gnu.tar.gz | tar -xz
+          LATEST_TAG=$(curl -s https://api.github.com/repos/orhun/git-cliff/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
+          curl -sSL "https://github.com/orhun/git-cliff/releases/download/${LATEST_TAG}/git-cliff-${LATEST_TAG#v}-x86_64-unknown-linux-gnu.tar.gz" | tar -xz
           sudo mv git-cliff /usr/local/bin/
-
+          
       - name: Generate CHANGELOG.md
         run: |
-          git-cliff -o CHANGELOG.md
+          # Generate changelog for this release only
+          git-cliff -l -u -o CHANGELOG.md
+          # Also update the full CHANGELOG
+          git-cliff -o CHANGELOG_FULL.md
+
+      - name: Check if CHANGELOG changed
+        id: changelog-check
+        run: |
+          if git diff --quiet CHANGELOG.md; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Commit and push CHANGELOG.md
+        if: steps.changelog-check.outputs.changed == 'true'
         run: |
-          git add CHANGELOG.md
+          git add CHANGELOG.md CHANGELOG_FULL.md
           git commit -m "docs: update changelog for ${{ github.ref_name }}"
-          git push origin HEAD:main  # or 'master' if that's your default branch
+          # Push to the branch the tag was created from
+          git push origin HEAD:$(git rev-parse --abbrev-ref HEAD) || git push origin HEAD:main
 
-      - name: Create tar.gz of app
+      - name: Create application archive
         run: |
-          tar -czvf erpnext_mcp_server-${{ github.ref_name }}.tar.gz erpnext_mcp_server
+          # Create a clean directory for the app
+          mkdir -p release_build
+          
+          # Copy app files (excluding git files, __pycache__, etc.)
+          rsync -av \
+            --exclude='.*' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='node_modules' \
+            --exclude='build' \
+            --exclude='dist' \
+            --exclude='venv' \
+            --exclude='.git' \
+            erpnext_mcp_server/ \
+            release_build/erpnext_mcp_server/
+          
+          # Create the archive
+          cd release_build
+          tar -czvf ../erpnext_mcp_server-${{ github.ref_name }}.tar.gz erpnext_mcp_server/
+          cd ..
+          
+          # Generate checksum
+          sha256sum erpnext_mcp_server-${{ github.ref_name }}.tar.gz > erpnext_mcp_server-${{ github.ref_name }}.tar.gz.sha256
+
+      - name: Extract release notes
+        id: extract-notes
+        run: |
+          # Extract only this version's notes from the changelog
+          VERSION="${{ github.ref_name }}"
+          awk -v ver="## ${VERSION#v}" 'BEGIN{p=0} $0==ver{p=1; next} /^## [0-9]/{p=0} p{print}' CHANGELOG.md > release_notes.md
+          
+          # If no specific release notes, use the full changelog
+          if [ ! -s release_notes.md ]; then
+            cp CHANGELOG.md release_notes.md
+          fi
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2  # Updated to v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          body_path: CHANGELOG.md
-          files: erpnext_mcp_server-${{ github.ref_name }}.tar.gz
+          body_path: release_notes.md
+          files: |
+            erpnext_mcp_server-${{ github.ref_name }}.tar.gz
+            erpnext_mcp_server-${{ github.ref_name }}.tar.gz.sha256
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-artifacts-${{ github.ref_name }}
+          path: |
+            erpnext_mcp_server-${{ github.ref_name }}.tar.gz
+            erpnext_mcp_server-${{ github.ref_name }}.tar.gz.sha256
+            CHANGELOG.md
+            release_notes.md
+          retention-days: 30

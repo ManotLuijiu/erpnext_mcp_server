@@ -94,13 +94,26 @@ jobs:
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
 
-      - name: Install
+      - name: Install Required Apps (ERPNext and Translation Tools)
+        working-directory: /home/runner/frappe-bench
+        run: |
+          # Install ERPNext
+          bench get-app --branch version-15 erpnext https://github.com/frappe/erpnext.git
+          
+          # Install Translation Tools
+          bench get-app --branch main translation_tools https://github.com/ManotLuijiu/translation_tools.git
+
+      - name: Install ERPNext MCP Server
         working-directory: /home/runner/frappe-bench
         run: |
           bench get-app erpnext_mcp_server $GITHUB_WORKSPACE
           bench setup requirements --dev
           bench new-site --db-root-password root --admin-password admin test_site
+
+          bench --site test_site install-app erpnext
+          bench --site test_site install-app translation_tools
           bench --site test_site install-app erpnext_mcp_server
+          
           bench build
         env:
           CI: 'Yes'

@@ -1,0 +1,23 @@
+{
+    "content": null,
+    "creation": "2025-04-13 21:01:47.019973",
+    "docstatus": 0,
+    "doctype": "Page",
+    "idx": 0,
+    "modified": "2025-04-13 21:01:47.019973",
+    "modified_by": "Administrator",
+    "module": "ERPNext MCP Server",
+    "name": "mcp-server-dashboard",
+    "owner": "Administrator",
+    "page_name": "mcp-server-dashboard",
+    "roles": [
+        {
+            "role": "System Manager"
+        }
+    ],
+    "script": null,
+    "standard": "Yes",
+    "style": null,
+    "system_page": 0,
+    "title": "MCP Server Dashboard"
+}

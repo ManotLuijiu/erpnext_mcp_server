@@ -8,7 +8,18 @@ app_license = "mit"
 # Apps
 # ------------------
 
-required_apps = ["erpnext", "translation_tools"]
+required_apps = ["erpnext"]
+
+navbar_items = [
+    {
+        "label": "MCP Server",
+        "icon": "octicon octicon-cpu",
+        "route": "mcp-server-dashboard",
+        "description": "Manage Model Context Protocol (MCP) server",
+        "condition": "frappe.boot.user.can_read.indexOf('MCP Server Settings') !== -1",
+    }
+]
+
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -27,6 +38,21 @@ required_apps = ["erpnext", "translation_tools"]
 # include js, css files in header of desk.html
 # app_include_css = "/assets/erpnext_mcp_server/css/erpnext_mcp_server.css"
 # app_include_js = "/assets/erpnext_mcp_server/js/erpnext_mcp_server.js"
+app_include_js = ["erpnext_mcp_server.bundle.js"]
+
+# Define boot_session to load MCP Server status
+boot_session = "erpnext_mcp_server.api.boot.get_boot_info"
+
+
+website_route_rules = [
+    {
+        "from_route": "/api/mcp/<path:path>",
+        "to_route": "erpnext_mcp_server.api.mcp_proxy.query",
+    },
+]
+
+# After site ready
+after_migrate = "erpnext_mcp_server.api.mcp_server.auto_start_server"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/erpnext_mcp_server/css/erpnext_mcp_server.css"
@@ -83,7 +109,7 @@ required_apps = ["erpnext", "translation_tools"]
 # ------------
 
 # before_install = "erpnext_mcp_server.install.before_install"
-# after_install = "erpnext_mcp_server.install.after_install"
+after_install = "erpnext_mcp_server.install.after_install"
 
 # Uninstallation
 # ------------

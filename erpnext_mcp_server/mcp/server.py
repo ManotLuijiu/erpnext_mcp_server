@@ -2094,8 +2094,246 @@ def run_erp_mcp_server(transport: str = "stdio"):
             frappe.db.close()
 
 
-# Main entry point
+async def handle_query_mode(query_data, result_file=None):
+    """
+    Special handler for direct query mode that bypasses the MCP protocol
+
+    Args:
+        query_data: The query data as a dict with 'query' and 'context' keys
+        result_file: Optional path to write the result to
+
+    Returns:
+        Query response dict
+    """
+    try:
+        # Extract query and context
+        query_text = query_data.get("query", "")
+        context = query_data.get("context", {})
+
+        # Process the query
+        # Here we'd typically pass it to an LLM, but for testing we'll just return a simple response
+        response = f"Processed query: {query_text}"
+
+        # In a real implementation, you would:
+        # 1. Check what the query is asking for
+        # 2. Use the appropriate tools to fulfill the query
+        # 3. Format the response nicely
+
+        # For now, let's make a basic implementation that detects a few query types
+        if "sales invoice" in query_text.lower() or "invoice" in query_text.lower():
+            # Handle invoice query
+            invoice_info = "No specific invoice ID provided"
+
+            # Look for invoice numbers in the query
+            import re
+
+            invoice_match = re.search(r"INV-\d+", query_text)
+            if invoice_match:
+                invoice_id = invoice_match.group()
+                try:
+                    # Try to get invoice data
+                    invoice_data = await get_document("Sales Invoice", invoice_id, None)
+                    if "error" not in invoice_data:
+                        invoice_info = f"Sales Invoice {invoice_id}:\n"
+                        invoice_info += f"Customer: {invoice_data.get('customer')}\n"
+                        invoice_info += f"Date: {invoice_data.get('posting_date')}\n"
+                        invoice_info += f"Total: {invoice_data.get('grand_total')}\n"
+                        invoice_info += f"Status: {invoice_data.get('status')}"
+                    else:
+                        invoice_info = f"Could not find invoice {invoice_id}: {invoice_data.get('error')}"
+                except Exception as e:
+                    invoice_info = f"Error retrieving invoice: {str(e)}"
+
+            response = f"Here's the information about the invoice you requested:\n\n{invoice_info}"
+
+        elif "customer" in query_text.lower():
+            # Handle customer query
+            customer_info = "No specific customer ID provided"
+
+            # Look for customer names in the query
+            words = query_text.split()
+            for word in words:
+                if len(word) > 3 and word.lower() not in (
+                    "customer",
+                    "about",
+                    "info",
+                    "tell",
+                    "give",
+                    "list",
+                ):
+                    try:
+                        # Try to find customer data
+                        customers = await list_documents(
+                            "Customer",
+                            None,
+                            ["name", "customer_name", "customer_type", "territory"],
+                            5,
+                            "name",
+                        )
+                        if "error" not in customers and customers.get("items"):
+                            customer_info = "Here are some customers:\n"
+                            for cust in customers.get("items", []):
+                                customer_info += f"• {cust.get('customer_name')} ({cust.get('name')})\n"
+                        else:
+                            customer_info = "No customers found"
+                    except Exception as e:
+                        customer_info = f"Error retrieving customers: {str(e)}"
+                    break
+
+            response = (
+                f"Here's the customer information you requested:\n\n{customer_info}"
+            )
+
+        elif "doctype" in query_text.lower() or "doctypes" in query_text.lower():
+            # Handle DocType query
+            try:
+                doctypes = await get_doctypes(None)
+                if "error" not in doctypes:
+                    doctype_info = "Here are some DocTypes:\n"
+                    for dt in doctypes.get("doctypes", [])[:10]:  # Limit to 10
+                        doctype_info += f"• {dt.get('name')} ({dt.get('module')})\n"
+                else:
+                    doctype_info = f"Error getting DocTypes: {doctypes.get('error')}"
+            except Exception as e:
+                doctype_info = f"Error retrieving DocTypes: {str(e)}"
+
+            response = f"Here are some DocTypes in ERPNext:\n\n{doctype_info}"
+
+        elif (
+            "system info" in query_text.lower() or "about system" in query_text.lower()
+        ):
+            # Handle system info query
+            try:
+                info = await get_system_info(None)
+                if "error" not in info:
+                    system_info = "System Information:\n"
+                    system_info += f"Frappe Version: {info.get('frappe_version')}\n"
+                    system_info += f"ERPNext Version: {info.get('erpnext_version')}\n"
+                    system_info += f"Site Name: {info.get('site_name')}\n"
+                    system_info += f"Active Users: {info.get('active_users')}\n"
+                    system_info += (
+                        f"Installed Apps: {', '.join(info.get('installed_apps', []))}"
+                    )
+                else:
+                    system_info = f"Error getting system info: {info.get('error')}"
+            except Exception as e:
+                system_info = f"Error retrieving system info: {str(e)}"
+
+            response = f"Here's information about your ERPNext system:\n\n{system_info}"
+
+        elif "calculate" in query_text.lower() and "tax" in query_text.lower():
+            # Handle tax calculation query
+            import re
+
+            try:
+                # Extract a sample income value from the query
+                income_match = re.search(r"(\d[\d,]*\.?\d*)", query_text)
+                income = 1000000  # Default
+                if income_match:
+                    income_str = income_match.group(1).replace(",", "")
+                    income = float(income_str)
+
+                # Choose between personal and corporate tax
+                tax_type = (
+                    "personal" if "personal" in query_text.lower() else "corporate"
+                )
+
+                # Call the tax calculation tool
+                tax_result = await calculate_thai_tax(tax_type, None, income, {}, 2023)
+
+                if "error" not in tax_result:
+                    tax_info = f"Tax Calculation ({tax_type}):\n"
+                    tax_info += f"Income: {tax_result.get('total_income'):,.2f} THB\n"
+                    tax_info += f"Deductions: {tax_result.get('total_deductions', 0):,.2f} THB\n"
+                    tax_info += (
+                        f"Taxable Income: {tax_result.get('taxable_income'):,.2f} THB\n"
+                    )
+                    tax_info += (
+                        f"Tax Amount: {tax_result.get('calculated_tax'):,.2f} THB\n"
+                    )
+                    tax_info += (
+                        f"Effective Rate: {tax_result.get('effective_tax_rate'):.2f}%"
+                    )
+                else:
+                    tax_info = f"Error calculating tax: {tax_result.get('error')}"
+            except Exception as e:
+                tax_info = f"Error with tax calculation: {str(e)}"
+
+            response = f"Here's the tax calculation result:\n\n{tax_info}"
+
+        elif "help" in query_text.lower() or "what can you do" in query_text.lower():
+            # Help message
+            response = """I can help you with various ERPNext tasks, such as:
+
+1. Looking up information about Sales Invoices
+2. Finding customer data
+3. Listing DocTypes in the system
+4. Getting system information
+5. Calculating taxes
+6. Running reports
+
+You can ask me things like:
+- "Show me invoice INV-12345"
+- "List customers"
+- "What DocTypes are available?"
+- "What's the system info?"
+- "Calculate personal tax on 1,000,000 THB"
+- "Help me find information about a customer"
+
+How can I assist you today?"""
+
+        # Create the result to return
+        import time
+
+        result = {
+            "response": response,
+            "query": query_text,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        # Write to result file if specified
+        if result_file:
+            with open(result_file, "w") as f:
+                json.dump(result, f)
+
+        return result
+
+    except Exception as e:
+        error_result = {
+            "error": str(e),
+            "query": query_data.get("query", ""),
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        # Write error to result file if specified
+        if result_file:
+            with open(result_file, "w") as f:
+                json.dump(error_result, f)
+
+        return error_result
+
+
+# Modify the main entry point to support query mode
 if __name__ == "__main__":
+    # Check if running in query mode
+    if os.environ.get("MCP_QUERY_MODE") == "1":
+        import asyncio
+        import json
+
+        query_data = json.loads(os.environ.get("MCP_QUERY_DATA", "{}"))
+        result_file = os.environ.get("MCP_RESULT_FILE")
+
+        # Run in query mode
+        result = asyncio.run(handle_query_mode(query_data, result_file))
+
+        # If no result file was specified, print the result to stdout
+        if not result_file:
+            print(json.dumps(result))
+
+        # Exit after handling query
+        sys.exit(0)
+
+    # Original code for standard MCP server mode
     # Use environment variable for transport
     transport_env = os.environ.get("MCP_TRANSPORT", "stdio")
 
@@ -2113,3 +2351,24 @@ if __name__ == "__main__":
 
     # Run the server
     run_erp_mcp_server(transport_env)
+
+
+# Main entry point
+# if __name__ == "__main__":
+#     # Use environment variable for transport
+#     transport_env = os.environ.get("MCP_TRANSPORT", "stdio")
+
+#     # Validate the transport value
+#     if transport_env not in ("stdio", "sse"):
+#         logger.warning(
+#             f"Invalid transport '{transport_env}' in environment. Defaulting to 'stdio'."
+#         )
+#         transport_env = "stdio"
+
+#     # Set up Frappe site from environment if available
+#     site = os.environ.get("FRAPPE_SITE")
+#     if site:
+#         os.environ["FRAPPE_SITE"] = site
+
+#     # Run the server
+#     run_erp_mcp_server(transport_env)

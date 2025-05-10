@@ -12,8 +12,17 @@ def call_tool(tool_name, arguments):
 
 
 @frappe.whitelist()
-def get_resource(resource_uri):
+async def read_resources(resource_uri):
     """Get a resource from the MCP server"""
     # Implement permission checks and logging
     # Then delegate to the MCP server
-    return erp_server.get_resource(resource_uri)
+    resources = await erp_server.read_resource(resource_uri)
+    return resources
+
+
+@frappe.whitelist()
+def get_resources():
+    """Get a resource from the MCP server"""
+    # Implement permission checks and logging
+    # Then delegate to the MCP server
+    return erp_server.list_resources()
