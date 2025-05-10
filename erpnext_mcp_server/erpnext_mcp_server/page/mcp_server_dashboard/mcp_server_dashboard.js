@@ -8,17 +8,57 @@ frappe.pages['mcp-server-dashboard'].on_page_load = function (wrapper) {
   // Add the page content
   $(frappe.render_template('mcp_server_dashboard', {})).appendTo(page.body)
 
-  // Initialize the dashboard
-  new MCPServerDashboard(page)
+  // Initialize the dashboard if not already created
+  if (!frappe.pages['mcp-server-dashboard'].dashboard) {
+    frappe.pages['mcp-server-dashboard'].dashboard = new MCPServerDashboard(
+      page,
+    )
+  }
+}
+
+// Single page show handler
+frappe.pages['mcp-server-dashboard'].on_page_show = function () {
+  // Ensure dashboard instance exists
+  if (frappe.pages['mcp-server-dashboard'].dashboard) {
+    frappe.pages['mcp-server-dashboard'].dashboard.on_show()
+  }
+}
+
+// Single page hide handler
+frappe.pages['mcp-server-dashboard'].on_page_hide = function () {
+  if (frappe.pages['mcp-server-dashboard'].dashboard) {
+    frappe.pages['mcp-server-dashboard'].dashboard.on_hide()
+  }
 }
 
 class MCPServerDashboard {
   constructor(page) {
     this.page = page
+    this.status_interval = null
+    this.theme_observer = null
     this.setup_theme_support()
     this.setup_actions()
     this.init_dashboard()
     this.start_status_refresh()
+  }
+
+  // Called when page is shown
+  on_show() {
+    // Reapply theme styles and restart refresh if needed
+    this.apply_theme_styles()
+    if (!this.status_interval) {
+      this.start_status_refresh()
+    }
+    this.refresh_status()
+  }
+
+  // Called when page is hidden
+  on_hide() {
+    // Clean up intervals but keep the dashboard instance
+    if (this.status_interval) {
+      clearInterval(this.status_interval)
+      this.status_interval = null
+    }
   }
 
   setup_theme_support() {
@@ -27,9 +67,6 @@ class MCPServerDashboard {
 
     // Watch for theme changes
     this.observe_theme_changes()
-
-    // Add theme toggle button to the page
-    // this.add_theme_toggle()
   }
 
   apply_theme_styles() {
@@ -163,35 +200,6 @@ class MCPServerDashboard {
           border-color: ${isDarkTheme ? 'var(--primary-color)' : '#007bff'};
         }
         
-        /* Theme toggle button */
-        .theme-toggle-btn {
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          background: ${isDarkTheme ? 'var(--btn-bg)' : '#ffffff'};
-          border: 1px solid ${isDarkTheme ? 'var(--border-color)' : '#d1d8dd'};
-          border-radius: 50%;
-          width: 48px;
-          height: 48px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          box-shadow: 0 2px 8px ${isDarkTheme ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)'};
-          transition: all 0.3s ease;
-          z-index: 1000;
-        }
-        
-        .theme-toggle-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px ${isDarkTheme ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.15)'};
-        }
-        
-        .theme-toggle-btn i {
-          font-size: 20px;
-          color: ${isDarkTheme ? 'var(--text-color)' : '#333'};
-        }
-        
         /* Responsive adjustments */
         @media (max-width: 768px) {
           .mcp-server-dashboard {
@@ -200,13 +208,6 @@ class MCPServerDashboard {
           
           .mcp-server-dashboard .card {
             margin-bottom: 15px;
-          }
-          
-          .theme-toggle-btn {
-            bottom: 15px;
-            right: 15px;
-            width: 40px;
-            height: 40px;
           }
         }
         
@@ -303,83 +304,26 @@ class MCPServerDashboard {
   }
 
   observe_theme_changes() {
+    // Disconnect existing observer if any
+    if (this.theme_observer) {
+      this.theme_observer.disconnect()
+    }
+
     // Use MutationObserver to detect theme changes
-    const observer = new MutationObserver((mutations) => {
+    this.theme_observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (
           mutation.type === 'attributes' &&
           mutation.attributeName === 'data-theme'
         ) {
           this.apply_theme_styles()
-          this.update_theme_toggle_icon()
         }
       }
     })
 
-    observer.observe(document.documentElement, {
+    this.theme_observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['data-theme'],
-    })
-  }
-
-  // add_theme_toggle() {
-  //   // Add theme toggle button to the page
-  //   const theme_toggle_html = `
-  //     <div class="theme-toggle-btn" title="Toggle Dark/Light Theme">
-  //       <i class="fa fa-moon-o"></i>
-  //     </div>
-  //   `
-
-  //   $('body').append(theme_toggle_html)
-
-  //   // Set initial icon based on current theme
-  //   this.update_theme_toggle_icon()
-
-  //   // Add click handler
-  //   $('.theme-toggle-btn').on('click', () => {
-  //     this.toggle_theme()
-  //   })
-  // }
-
-  update_theme_toggle_icon() {
-    const isDarkTheme =
-      document.documentElement.getAttribute('data-theme') === 'dark'
-    const icon = $('.theme-toggle-btn i')
-
-    if (isDarkTheme) {
-      icon.removeClass('fa-moon-o').addClass('fa-sun-o')
-    } else {
-      icon.removeClass('fa-sun-o').addClass('fa-moon-o')
-    }
-  }
-
-  toggle_theme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme')
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
-
-    // Set new theme
-    document.documentElement.setAttribute('data-theme', newTheme)
-
-    // Save user preference
-    frappe.call({
-      method: 'frappe.client.set_value',
-      args: {
-        doctype: 'User',
-        name: frappe.session.user,
-        fieldname: 'desk_theme',
-        value: newTheme,
-      },
-      callback: (r) => {
-        if (r.message) {
-          frappe.show_alert(
-            {
-              message: __('Theme changed successfully'),
-              indicator: 'green',
-            },
-            3,
-          )
-        }
-      },
     })
   }
 
@@ -408,35 +352,18 @@ class MCPServerDashboard {
     this.refresh_status()
   }
 
-  // start_status_refresh() {
-  //   // Refresh status every 10 seconds
-  //   const me = this
-  //   setInterval(function () {
-  //     me.refresh_status()
-  //   }, 10000)
-  // }
-
   start_status_refresh() {
+    // Clear any existing interval
+    if (this.status_interval) {
+      clearInterval(this.status_interval)
+    }
+
     // Refresh status every 10 seconds
     const me = this
     this.status_interval = setInterval(function () {
       me.refresh_status()
     }, 10000)
   }
-
-  // refresh_status() {
-  //   const me = this
-  //   frappe.call({
-  //     method: 'erpnext_mcp_server.api.mcp_server.get_mcp_server_status',
-  //     callback: function (r) {
-  //       if (r.message) {
-  //         me.update_status_display(r.message)
-  //       } else {
-  //         frappe.msgprint(__('Failed to restart MCP server'))
-  //       }
-  //     },
-  //   })
-  // }
 
   refresh_status() {
     const me = this
@@ -674,43 +601,21 @@ class MCPServerDashboard {
     })
   }
 
-  // Cleanup when page is destroyed
+  // Cleanup when dashboard is destroyed
   destroy() {
+    // Clear intervals
     if (this.status_interval) {
       clearInterval(this.status_interval)
+      this.status_interval = null
     }
-    $('.theme-toggle-btn').remove()
+
+    // Disconnect observers
+    if (this.theme_observer) {
+      this.theme_observer.disconnect()
+      this.theme_observer = null
+    }
+
+    // Remove styles
     $('#mcp-dashboard-theme-styles').remove()
-  }
-}
-
-// Ensure theme toggle is cleaned up when navigating away
-frappe.pages['mcp-server-dashboard'].on_page_hide = function () {
-  $('.theme-toggle-btn').remove()
-  $('#mcp-dashboard-theme-styles').remove()
-}
-
-// Store a reference to the dashboard instance for cleanup
-frappe.pages['mcp-server-dashboard'].dashboard = null
-
-frappe.pages['mcp-server-dashboard'].on_page_show = function (wrapper) {
-  if (!frappe.pages['mcp-server-dashboard'].dashboard) {
-    const page = frappe.ui.make_app_page({
-      parent: wrapper,
-      title: 'MCP Server Dashboard',
-      single_column: false,
-    })
-
-    $(frappe.render_template('mcp_server_dashboard', {})).appendTo(page.body)
-    frappe.pages['mcp-server-dashboard'].dashboard = new MCPServerDashboard(
-      page,
-    )
-  }
-}
-
-frappe.pages['mcp-server-dashboard'].on_page_hide = function () {
-  if (frappe.pages['mcp-server-dashboard'].dashboard) {
-    frappe.pages['mcp-server-dashboard'].dashboard.destroy()
-    frappe.pages['mcp-server-dashboard'].dashboard = null
   }
 }

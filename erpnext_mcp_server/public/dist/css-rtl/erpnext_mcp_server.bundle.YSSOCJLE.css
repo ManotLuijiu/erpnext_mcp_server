@@ -1,4 +1,4 @@
-/* ../../../../../var/folders/8c/tkdbn7xx4wb6j1526y541_6c0000gn/T/tmp-55003-6UFKJgSUosC1/erpnext_mcp_server/erpnext_mcp_server/public/css/erpnext_mcp_server.bundle.css */
+/* ../../../../../var/folders/8c/tkdbn7xx4wb6j1526y541_6c0000gn/T/tmp-57827-Dr5GxIc4giP4/erpnext_mcp_server/erpnext_mcp_server/public/css/erpnext_mcp_server.bundle.css */
 :root {
   --mcp-bg-color: #f8f9fa;
   --mcp-text-color: #333;
@@ -160,7 +160,7 @@
 }
 .logs-toolbar {
   margin-bottom: 10px;
-  text-align: right;
+  text-align: left;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -213,7 +213,7 @@
   border-color: var(--mcp-primary-color);
 }
 .theme-toggle-btn i {
-  margin-right: 6px;
+  margin-left: 6px;
 }
 @media (max-width: 768px) {
   .mcp-dashboard-container {
@@ -260,4 +260,4 @@
 [data-theme=dark] .logs-content::-webkit-scrollbar-thumb:hover {
   background: #666;
 }
-/*# sourceMappingURL=erpnext_mcp_server.bundle.JZMBVHAE.css.map */
+/*# sourceMappingURL=erpnext_mcp_server.bundle.YSSOCJLE.css.map */
