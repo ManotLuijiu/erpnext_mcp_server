@@ -13,7 +13,8 @@ dependencies = [
     "python-dotenv",
     "openai",
     "ipykernel",
-    "httpx"
+    "httpx",
+    "docling"
 ]
 
 [build-system]

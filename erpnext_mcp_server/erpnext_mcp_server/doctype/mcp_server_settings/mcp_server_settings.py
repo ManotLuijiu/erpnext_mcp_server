@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class MCPServerSettings(Document):
+    enabled = frappe.db.get_value("MCP Server Settings", "enabled") or 0
+    transport = frappe.db.get_value("MCP Server Settings", "transport") or "stdio"
+    process_id = None  # Define process_id as a class attribute
+
     def validate(self):
         # Ensure only one active server settings document exists
         if not self.is_new():
@@ -52,7 +56,7 @@ class MCPServerSettings(Document):
             # Prepare environment variables
             env = os.environ.copy()
             env["FRAPPE_SITE"] = frappe.local.site
-            env["MCP_TRANSPORT"] = self.transport or "stdio"
+            env["MCP_TRANSPORT"] = str(self.transport) if self.transport else "stdio"
 
             # Start the server process
             self.process = subprocess.Popen(
