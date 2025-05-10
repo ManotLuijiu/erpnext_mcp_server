@@ -4,18 +4,34 @@ name: CI
 on:
   push:
     branches:
-      - develop
+      - main
   pull_request:
 
 concurrency:
-  group: develop-erpnext_mcp_server-${{ github.event.number }}
+  group: main-erpnext_mcp_server-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
+      matrix:
+        python-version: [3.10, 3.11, 3.12]
+        node-version: [18, 20, 22]
+        include:
+          - python-version: 3.10
+            node-version: 18
+          - python-version: 3.11
+            node-version: 20
+          - python-version: 3.12
+            node-version: 22
+          - python-version: 3.10
+            node-version: 22
+          - python-version: 3.11
+            node-version: 18
+          - python-version: 3.12
+            node-version: 20
     name: Server
 
     services:
@@ -28,7 +44,7 @@ jobs:
         ports:
           - 11000:6379
       mariadb:
-        image: mariadb:10.6
+        image: mariadb:10.6-focal
         env:
           MYSQL_ROOT_PASSWORD: root
         ports:
@@ -37,7 +53,7 @@ jobs:
 
     steps:
       - name: Clone
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Find tests
         run: |
@@ -47,37 +63,42 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version:  ${{ matrix.python-version }}
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node-version }}
           check-latest: true
 
       - name: Cache pip
         uses: actions/cache@v4
+        id: pip-cache
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}  # Added python version to key
           restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
             ${{ runner.os }}-pip-
-            ${{ runner.os }}-
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: 'echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT'
 
-      - uses: actions/cache@v4
+      - name: Cache yarn dependencies
+        uses: actions/cache@v4
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-yarn-${{ matrix.node-version }}-${{ hashFiles('**/yarn.lock') }}  # Added node version to key
           restore-keys: |
+            ${{ runner.os }}-yarn-${{ matrix.node-version }}-
             ${{ runner.os }}-yarn-
 
       - name: Install MariaDB Client
-        run: sudo apt-get install mariadb-client-10.6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mariadb-client
 
       - name: Setup
         run: |
