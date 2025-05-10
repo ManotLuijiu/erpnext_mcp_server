@@ -1,6 +1,4 @@
-/* MCP Server Dashboard Theme Support */
-
-/* CSS Variables for theme integration */
+/* ../../../../../var/folders/8c/tkdbn7xx4wb6j1526y541_6c0000gn/T/tmp-25206-O0C3FxMvY9QN/erpnext_mcp_server/erpnext_mcp_server/public/css/erpnext_mcp_server.bundle.css */
 :root {
   --mcp-bg-color: #f8f9fa;
   --mcp-text-color: #333;
@@ -14,9 +12,7 @@
   --mcp-code-bg: #f5f5f5;
   --mcp-code-color: #333;
 }
-
-/* Dark theme variables */
-[data-theme='dark'] {
+[data-theme=dark] {
   --mcp-bg-color: var(--bg-color, #1a1a1a);
   --mcp-text-color: var(--text-color, #e0e0e0);
   --mcp-text-muted: var(--text-muted, #999);
@@ -29,15 +25,12 @@
   --mcp-code-bg: #1e1e1e;
   --mcp-code-color: #d4d4d4;
 }
-
-/* Base dashboard styles */
 .mcp-dashboard-container {
   background-color: var(--mcp-bg-color);
   min-height: 100vh;
   padding: 20px;
   color: var(--mcp-text-color);
 }
-
 .dashboard-header {
   display: flex;
   justify-content: space-between;
@@ -46,14 +39,11 @@
   padding-bottom: 15px;
   border-bottom: 1px solid var(--mcp-border-color);
 }
-
 .dashboard-header h2 {
   color: var(--mcp-text-color);
   margin: 0;
   font-weight: 500;
 }
-
-/* Dashboard cards */
 .dashboard-card {
   background: var(--mcp-card-bg);
   border: 1px solid var(--mcp-border-color);
@@ -62,46 +52,36 @@
   transition: all 0.3s ease;
   overflow: hidden;
 }
-
 .dashboard-card:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-
-[data-theme='dark'] .dashboard-card:hover {
+[data-theme=dark] .dashboard-card:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
-
 .card-header {
   padding: 15px;
   border-bottom: 1px solid var(--mcp-border-color);
   background: var(--mcp-subtle-accent);
 }
-
 .card-header h4 {
   margin: 0;
   color: var(--mcp-text-color);
   font-weight: 500;
   font-size: 16px;
 }
-
 .card-body {
   padding: 20px;
 }
-
-/* Metrics */
 .metric-value {
   font-size: 2em;
   font-weight: bold;
   color: var(--mcp-text-color);
 }
-
-/* Status indicator */
 .status-indicator {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
 .indicator-dot {
   width: 10px;
   height: 10px;
@@ -109,41 +89,32 @@
   background-color: var(--mcp-success-color);
   display: inline-block;
 }
-
 .status-indicator.offline .indicator-dot {
   background-color: var(--mcp-danger-color);
 }
-
 .status-text {
   color: var(--mcp-text-color);
   font-weight: 500;
 }
-
-/* Navigation tabs */
 .nav-tabs {
   border-bottom: 2px solid var(--mcp-border-color);
   margin-top: 30px;
 }
-
 .nav-tabs .nav-link {
   color: var(--mcp-text-muted);
   border: none;
   padding: 12px 24px;
   transition: all 0.3s ease;
 }
-
 .nav-tabs .nav-link:hover {
   color: var(--mcp-text-color);
   background-color: var(--mcp-subtle-accent);
 }
-
 .nav-tabs .nav-link.active {
   color: var(--mcp-primary-color);
   border-bottom: 2px solid var(--mcp-primary-color);
   background: transparent;
 }
-
-/* Tab content */
 .tab-content {
   margin-top: 20px;
   background: var(--mcp-card-bg);
@@ -151,25 +122,29 @@
   border-radius: 8px;
   padding: 20px;
 }
-
-/* Code blocks */
 .code-block {
   background: var(--mcp-code-bg);
   color: var(--mcp-code-color);
   padding: 15px;
   border-radius: 4px;
   overflow-x: auto;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family:
+    "Monaco",
+    "Menlo",
+    "Ubuntu Mono",
+    monospace;
   font-size: 14px;
   border: 1px solid var(--mcp-border-color);
   line-height: 1.6;
 }
-
-/* Logs */
 .logs-content {
   background: #000;
   color: #0f0;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family:
+    "Monaco",
+    "Menlo",
+    "Ubuntu Mono",
+    monospace;
   font-size: 13px;
   line-height: 1.5;
   padding: 15px;
@@ -178,13 +153,11 @@
   border-radius: 4px;
   border: 1px solid #333;
 }
-
-[data-theme='dark'] .logs-content {
+[data-theme=dark] .logs-content {
   background: #1a1a1a;
   color: #d4d4d4;
   border-color: #333;
 }
-
 .logs-toolbar {
   margin-bottom: 10px;
   text-align: right;
@@ -192,14 +165,11 @@
   justify-content: space-between;
   align-items: center;
 }
-
-/* Tools and Resources lists */
 .tools-list,
 .resources-list {
   display: grid;
   gap: 15px;
 }
-
 .tool-item,
 .resource-item {
   background: var(--mcp-subtle-accent);
@@ -208,33 +178,27 @@
   padding: 15px;
   transition: all 0.3s ease;
 }
-
 .tool-item:hover,
 .resource-item:hover {
   background: var(--mcp-bg-color);
   border-color: var(--mcp-primary-color);
 }
-
 .tool-item h5,
 .resource-item h5 {
   margin: 0 0 5px 0;
   color: var(--mcp-text-color);
   font-weight: 500;
 }
-
 .tool-item p,
 .resource-item p {
   margin: 0;
   color: var(--mcp-text-muted);
   font-size: 0.9em;
 }
-
-/* Theme toggle button */
 .theme-toggle-container {
   display: flex;
   align-items: center;
 }
-
 .theme-toggle-btn {
   background: var(--mcp-card-bg);
   border: 1px solid var(--mcp-border-color);
@@ -244,39 +208,30 @@
   cursor: pointer;
   transition: all 0.3s ease;
 }
-
 .theme-toggle-btn:hover {
   background: var(--mcp-subtle-accent);
   border-color: var(--mcp-primary-color);
 }
-
 .theme-toggle-btn i {
   margin-right: 6px;
 }
-
-/* Responsive design */
 @media (max-width: 768px) {
   .mcp-dashboard-container {
     padding: 10px;
   }
-
   .dashboard-header {
     flex-direction: column;
     gap: 15px;
     text-align: center;
   }
-
   .nav-tabs .nav-link {
     padding: 10px 16px;
     font-size: 14px;
   }
-
   .metric-value {
     font-size: 1.5em;
   }
 }
-
-/* Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -287,27 +242,22 @@
     transform: translateY(0);
   }
 }
-
 .dashboard-card,
 .tool-item,
 .resource-item {
   animation: fadeIn 0.3s ease forwards;
 }
-
-/* Custom scrollbar for dark theme */
-[data-theme='dark'] .logs-content::-webkit-scrollbar {
+[data-theme=dark] .logs-content::-webkit-scrollbar {
   width: 8px;
 }
-
-[data-theme='dark'] .logs-content::-webkit-scrollbar-track {
+[data-theme=dark] .logs-content::-webkit-scrollbar-track {
   background: #1a1a1a;
 }
-
-[data-theme='dark'] .logs-content::-webkit-scrollbar-thumb {
+[data-theme=dark] .logs-content::-webkit-scrollbar-thumb {
   background: #444;
   border-radius: 4px;
 }
-
-[data-theme='dark'] .logs-content::-webkit-scrollbar-thumb:hover {
+[data-theme=dark] .logs-content::-webkit-scrollbar-thumb:hover {
   background: #666;
 }
+/*# sourceMappingURL=erpnext_mcp_server.bundle.7B53RFAL.css.map */

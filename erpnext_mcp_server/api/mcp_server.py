@@ -1,11 +1,73 @@
 import frappe
-from frappe.utils import now_datetime
 import json
+import psutil
 import os
+import subprocess
+import time
+from typing import Dict, List, Any
+from datetime import datetime
+from frappe.utils import get_site_path, now_datetime, format_datetime
 
 
 @frappe.whitelist()
-def start_mcp_server(settings_name=None):
+def get_mcp_server_status() -> Dict[str, Any]:
+    """Get the current status of the MCP server"""
+    try:
+        # Get MCP Server settings
+        settings = frappe.get_single("MCP Server Settings")
+
+        # Check if the server process is running
+        is_running = False
+        process_id = None
+        uptime = None
+
+        if settings.process_id:
+            try:
+                # Check if the process exists
+                process = psutil.Process(settings.process_id)
+                if process.is_running():
+                    is_running = True
+                    process_id = settings.process_id
+
+                    # Calculate uptime
+                    if settings.last_start_time:
+                        start_time = frappe.utils.get_datetime(settings.last_start_time)
+                        uptime = str(frappe.utils.now_datetime() - start_time).split(
+                            "."
+                        )[0]
+            except psutil.NoSuchProcess:
+                # Process doesn't exist, clear the PID
+                settings.process_id = None
+                settings.save(ignore_permissions=True)
+
+        # Determine server status
+        status = "Running" if is_running else "Stopped"
+        if settings.last_error and not is_running:
+            status = "Error"
+
+        return {
+            "status": status,
+            "is_running": is_running,
+            "process_id": process_id,
+            "last_start_time": settings.last_start_time,
+            "last_stop_time": settings.last_stop_time,
+            "last_error": settings.last_error,
+            "enabled": settings.enabled,
+            "transport": settings.transport or "stdio",
+            "port": settings.server_port,
+            "uptime": uptime,
+            "active_connections": 0,  # Placeholder
+            "available_tools": 5,  # Placeholder
+            "available_resources": 3,  # Placeholder
+        }
+
+    except Exception as e:
+        frappe.logger().error(f"Error getting MCP server status: {str(e)}")
+        return {"status": "Error", "is_running": False, "last_error": str(e)}
+
+
+@frappe.whitelist()
+def start_mcp_server() -> Dict[str, Any]:
     """
     Start the MCP server.
     """

@@ -15,9 +15,372 @@ frappe.pages['mcp-server-dashboard'].on_page_load = function (wrapper) {
 class MCPServerDashboard {
   constructor(page) {
     this.page = page
+    this.setup_theme_support()
     this.setup_actions()
     this.init_dashboard()
     this.start_status_refresh()
+  }
+
+  setup_theme_support() {
+    // Apply theme styles immediately
+    this.apply_theme_styles()
+
+    // Watch for theme changes
+    this.observe_theme_changes()
+
+    // Add theme toggle button to the page
+    // this.add_theme_toggle()
+  }
+
+  apply_theme_styles() {
+    // Remove existing theme styles
+    $('#mcp-dashboard-theme-styles').remove()
+
+    // Detect current theme
+    const isDarkTheme =
+      document.documentElement.getAttribute('data-theme') === 'dark'
+
+    // Create dynamic styles
+    const theme_styles = `
+      <style id="mcp-dashboard-theme-styles">
+        /* Theme aware variables */
+        .mcp-server-dashboard {
+          background-color: ${isDarkTheme ? 'var(--bg-color)' : '#f5f5f5'};
+          color: ${isDarkTheme ? 'var(--text-color)' : '#333'};
+          min-height: calc(100vh - 60px);
+          padding: 20px;
+        }
+        
+        .mcp-server-dashboard .card {
+          background: ${isDarkTheme ? 'var(--card-bg)' : '#ffffff'};
+          border: 1px solid ${isDarkTheme ? 'var(--border-color)' : '#d1d8dd'};
+          border-radius: 8px;
+          margin-bottom: 20px;
+          box-shadow: 0 1px 3px ${isDarkTheme ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)'};
+          transition: all 0.3s ease;
+        }
+        
+        .mcp-server-dashboard .card:hover {
+          box-shadow: 0 4px 8px ${isDarkTheme ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.15)'};
+        }
+        
+        .mcp-server-dashboard .card-header {
+          background: ${isDarkTheme ? 'var(--subtle-accent)' : '#f8f9fa'};
+          border-bottom: 1px solid ${isDarkTheme ? 'var(--border-color)' : '#e0e6ed'};
+          padding: 15px 20px;
+        }
+        
+        .mcp-server-dashboard .card-title {
+          color: ${isDarkTheme ? 'var(--text-color)' : '#333'};
+          font-weight: 600;
+          font-size: 16px;
+          margin: 0;
+        }
+        
+        .mcp-server-dashboard .card-body {
+          padding: 20px;
+        }
+        
+        .mcp-server-dashboard label {
+          font-weight: 600;
+          color: ${isDarkTheme ? 'var(--text-muted)' : '#6c757d'};
+          font-size: 13px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .mcp-server-dashboard .form-group {
+          margin-bottom: 15px;
+        }
+        
+        .mcp-server-dashboard .form-group > div {
+          color: ${isDarkTheme ? 'var(--text-color)' : '#212529'};
+          font-size: 15px;
+          margin-top: 5px;
+        }
+        
+        /* Status display */
+        .status-display {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        
+        .indicator {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          display: inline-block;
+          margin-right: 0;
+        }
+        
+        #mcp-status-text {
+          font-weight: 600;
+          color: ${isDarkTheme ? 'var(--text-color)' : '#333'};
+        }
+        
+        /* Error section */
+        .mcp-error-section .card-header {
+          background: ${isDarkTheme ? '#2a1a1a' : '#fff5f5'};
+          border-color: ${isDarkTheme ? '#4a2020' : '#f8d7da'};
+        }
+        
+        .mcp-error-section .card {
+          border-color: ${isDarkTheme ? '#4a2020' : '#f8d7da'};
+        }
+        
+        #mcp-error-log {
+          background: ${isDarkTheme ? '#1a1a1a' : '#f8f9fa'};
+          color: ${isDarkTheme ? '#ff9999' : '#721c24'};
+          border: 1px solid ${isDarkTheme ? '#333' : '#e9ecef'};
+          border-radius: 4px;
+          padding: 10px;
+          font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+          font-size: 13px;
+          line-height: 1.5;
+          max-height: 200px;
+          overflow-y: auto;
+          white-space: pre-wrap;
+        }
+        
+        /* Action buttons styling */
+        .page-actions .btn {
+          border-radius: 4px;
+          padding: 6px 12px;
+          font-size: 13px;
+          font-weight: 500;
+          transition: all 0.3s ease;
+        }
+        
+        .page-actions .btn-default {
+          background: ${isDarkTheme ? 'var(--btn-bg)' : '#ffffff'};
+          border: 1px solid ${isDarkTheme ? 'var(--border-color)' : '#d1d8dd'};
+          color: ${isDarkTheme ? 'var(--text-color)' : '#333'};
+        }
+        
+        .page-actions .btn-default:hover {
+          background: ${isDarkTheme ? 'var(--subtle-accent)' : '#f8f9fa'};
+          border-color: ${isDarkTheme ? 'var(--primary-color)' : '#007bff'};
+        }
+        
+        /* Theme toggle button */
+        .theme-toggle-btn {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          background: ${isDarkTheme ? 'var(--btn-bg)' : '#ffffff'};
+          border: 1px solid ${isDarkTheme ? 'var(--border-color)' : '#d1d8dd'};
+          border-radius: 50%;
+          width: 48px;
+          height: 48px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 2px 8px ${isDarkTheme ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)'};
+          transition: all 0.3s ease;
+          z-index: 1000;
+        }
+        
+        .theme-toggle-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px ${isDarkTheme ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.15)'};
+        }
+        
+        .theme-toggle-btn i {
+          font-size: 20px;
+          color: ${isDarkTheme ? 'var(--text-color)' : '#333'};
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .mcp-server-dashboard {
+            padding: 10px;
+          }
+          
+          .mcp-server-dashboard .card {
+            margin-bottom: 15px;
+          }
+          
+          .theme-toggle-btn {
+            bottom: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+          }
+        }
+        
+        /* Indicators */
+        .indicator-green {
+          background-color: #28a745;
+          box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+        }
+        
+        .indicator-red {
+          background-color: #dc3545;
+          box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+        }
+        
+        .indicator-orange {
+          background-color: #fd7e14;
+          box-shadow: 0 0 0 0 rgba(253, 126, 20, 0.4);
+        }
+        
+        .indicator-blue {
+          background-color: #007bff;
+          box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.4);
+        }
+        
+        /* Add pulse animation for active status */
+        .indicator-green,
+        .indicator-blue {
+          animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+          0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+          }
+          
+          70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 6px rgba(0, 123, 255, 0);
+          }
+          
+          100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+          }
+        }
+        
+        /* Dark mode pulse animation */
+        .indicator-green.dark {
+          animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+          0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+          }
+          
+          70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+          }
+          
+          100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+          }
+        }
+        
+        /* List styles */
+        .mcp-server-dashboard ul {
+          padding-left: 20px;
+          color: ${isDarkTheme ? 'var(--text-color)' : '#444'};
+        }
+        
+        .mcp-server-dashboard ul li {
+          margin-bottom: 8px;
+          line-height: 1.6;
+        }
+        
+        /* Pre tag styling */
+        .mcp-server-dashboard pre {
+          background: ${isDarkTheme ? '#1a1a1a' : '#f8f9fa'};
+          border: 1px solid ${isDarkTheme ? '#333' : '#e9ecef'};
+          border-radius: 4px;
+          padding: 10px;
+          margin: 0;
+        }
+      </style>
+    `
+
+    // Add styles to head
+    $('head').append(theme_styles)
+  }
+
+  observe_theme_changes() {
+    // Use MutationObserver to detect theme changes
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (
+          mutation.type === 'attributes' &&
+          mutation.attributeName === 'data-theme'
+        ) {
+          this.apply_theme_styles()
+          this.update_theme_toggle_icon()
+        }
+      }
+    })
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
+  }
+
+  // add_theme_toggle() {
+  //   // Add theme toggle button to the page
+  //   const theme_toggle_html = `
+  //     <div class="theme-toggle-btn" title="Toggle Dark/Light Theme">
+  //       <i class="fa fa-moon-o"></i>
+  //     </div>
+  //   `
+
+  //   $('body').append(theme_toggle_html)
+
+  //   // Set initial icon based on current theme
+  //   this.update_theme_toggle_icon()
+
+  //   // Add click handler
+  //   $('.theme-toggle-btn').on('click', () => {
+  //     this.toggle_theme()
+  //   })
+  // }
+
+  update_theme_toggle_icon() {
+    const isDarkTheme =
+      document.documentElement.getAttribute('data-theme') === 'dark'
+    const icon = $('.theme-toggle-btn i')
+
+    if (isDarkTheme) {
+      icon.removeClass('fa-moon-o').addClass('fa-sun-o')
+    } else {
+      icon.removeClass('fa-sun-o').addClass('fa-moon-o')
+    }
+  }
+
+  toggle_theme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme')
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+
+    // Set new theme
+    document.documentElement.setAttribute('data-theme', newTheme)
+
+    // Save user preference
+    frappe.call({
+      method: 'frappe.client.set_value',
+      args: {
+        doctype: 'User',
+        name: frappe.session.user,
+        fieldname: 'desk_theme',
+        value: newTheme,
+      },
+      callback: (r) => {
+        if (r.message) {
+          frappe.show_alert(
+            {
+              message: __('Theme changed successfully'),
+              indicator: 'green',
+            },
+            3,
+          )
+        }
+      },
+    })
   }
 
   setup_actions() {

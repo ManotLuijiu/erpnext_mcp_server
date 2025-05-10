@@ -14,7 +14,11 @@ dependencies = [
     "openai",
     "ipykernel",
     "httpx",
-    "docling"
+    "docling",
+    "asyncio",
+    "pandas",
+    "numpy",
+    "pydantic",
 ]
 
 [build-system]
