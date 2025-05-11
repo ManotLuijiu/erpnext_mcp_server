@@ -1,0 +1,138 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-05-12 00:51:42.036769",
+ "doctype": "DocType",
+ "autoname": "field:server_name",
+ "naming_rule": "By fieldname",
+ "engine": "InnoDB",
+ "field_order": [
+ "server_details_section",
+  "server_name",
+  "server_description",
+  "server_type",
+  "column_break_ijug",
+  "server_status",
+  "server_port",
+  "server_script_path",
+  "server_controls_section",
+  "start_server",
+  "stop_server",
+  "restart_server",
+  "view_logs",
+  "server_logs_section",
+  "server_logs"
+ ],
+ "fields": [
+  {
+   "fieldname": "server_details_section",
+   "fieldtype": "Section Break",
+   "label": "Server Details"
+  },
+  {
+   "fieldname": "server_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Server Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "server_description",
+   "fieldtype": "Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "server_type",
+   "fieldtype": "Select",
+   "label": "Server Type",
+   "options": "ERPNext Core\nFetch Server\nAnalytics Server",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ijug",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "server_status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Stopped\nRunning\nError",
+   "read_only": 1
+  },
+  {
+   "fieldname": "server_port",
+   "fieldtype": "Int",
+   "label": "Port"
+  },
+  {
+   "fieldname": "server_script_path",
+   "fieldtype": "Data",
+   "label": "Script Path",
+   "reqd": 1
+  },
+  {
+   "fieldname": "server_controls_section",
+   "fieldtype": "Section Break",
+   "label": "Server Controls"
+  },
+  {
+   "fieldname": "start_server",
+   "fieldtype": "Button",
+   "label": "Start Server"
+  },
+  {
+   "fieldname": "stop_server",
+   "fieldtype": "Button",
+   "label": "Stop Server"
+  },
+  {
+   "fieldname": "restart_server",
+   "fieldtype": "Button",
+   "label": "Restart Server"
+  },
+  {
+   "fieldname": "view_logs",
+   "fieldtype": "Button",
+   "label": "View Logs"
+  },
+  {
+   "fieldname": "server_logs_section",
+   "fieldtype": "Section Break",
+   "label": "Server Logs"
+  },
+  {
+   "fieldname": "server_logs",
+   "fieldtype": "Text Editor",
+   "label": "Logs",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-05-12 00:51:42.036769",
+ "modified_by": "Administrator",
+ "module": "ERPNext MCP Server",
+ "name": "MCP Server Manager",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
