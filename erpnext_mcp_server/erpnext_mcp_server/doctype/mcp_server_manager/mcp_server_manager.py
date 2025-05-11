@@ -9,14 +9,42 @@ import frappe
 from frappe.model.document import Document
 from frappe import _
 from frappe.utils import now
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # These type hints will only be used during type checking
+    from typing import Any
 
 
 class MCPServerManager(Document):
+    # Type hints for DocType fields
+    server_name: str
+    server_description: Optional[str] = None
+    server_type: str
+    server_status: str
+    server_port: Optional[int] = None
+    server_script_path: str
+    server_logs: Optional[str] = None
+    server_pid: Optional[int] = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.process = None
-        self.server_script_path = None  # Initialize server_script_path
-        self.server_name = None  # Initialize server_name
+
+    def validate(self):
+        """Validate document before saving"""
+        if not self.server_name:
+            frappe.throw(_("Server Name is required"))
+
+        if not self.server_script_path:
+            frappe.throw(_("Server Script Path is required"))
+
+        if not self.server_type:
+            frappe.throw(_("Server Type is required"))
+
+        # Additional validations
+        if self.server_name and len(self.server_name) < 3:
+            frappe.throw(_("Server Name must be at least 3 characters long"))
 
     def before_save(self):
         # Validate script path exists
@@ -31,6 +59,7 @@ class MCPServerManager(Document):
         # Update server status when document is saved
         self.update_server_status()
 
+    @frappe.whitelist()
     def start_server(self):
         """Start the MCP Server"""
         if self.server_status == "Running":
@@ -66,12 +95,19 @@ class MCPServerManager(Document):
 
             frappe.msgprint(f"Server '{self.server_name}' started successfully")
 
+            return {
+                "success": True,
+                "message": f"Server '{self.server_name}' started successfully",
+            }
+
         except Exception as e:
             self.server_status = "Error"
             self.server_logs = str(e)
             self.save()
             frappe.throw(f"{_('Failed to start server:')} {str(e)}")
+            return {"success": False, "message": f"Failed to start server: {str(e)}"}
 
+    @frappe.whitelist()
     def stop_server(self):
         """Stop the MCP Server"""
         if self.server_status != "Running":
@@ -92,14 +128,22 @@ class MCPServerManager(Document):
 
             frappe.msgprint(f"Server '{self.server_name}' stopped successfully")
 
+            return {
+                "success": True,
+                "message": f"Server '{self.server_name}' stopped successfully",
+            }
+
         except Exception as e:
             frappe.throw(f"Failed to stop server: {str(e)}")
+            return {"success": False, "message": f"Failed to stop server: {str(e)}"}
 
+    @frappe.whitelist()
     def restart_server(self):
         """Restart the MCP Server"""
         self.stop_server()
         self.start_server()
 
+    @frappe.whitelist()
     def view_logs(self):
         """Load and display server logs"""
         try:
@@ -122,6 +166,7 @@ class MCPServerManager(Document):
         except Exception as e:
             frappe.throw(f"Failed to load logs: {str(e)}")
 
+    @frappe.whitelist()
     def update_server_status(self):
         """Check if server is still running and update status"""
         if hasattr(self, "server_pid") and self.server_pid:
