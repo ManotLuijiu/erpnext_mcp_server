@@ -35,8 +35,8 @@ class ChatMCPClient {
             }
             
             // If not in boot, check status via API
-            const response = await this.checkMCPServerStatus();
-            this.mcpServerRunning = response.is_running;
+            // const response = await this.checkMCPServerStatus();
+            // this.mcpServerRunning = response.is_running;
             
             // Set the base URL based on transport type
             if (this.mcpServerRunning) {
@@ -54,20 +54,20 @@ class ChatMCPClient {
         }
     }
 
-    async checkMCPServerStatus() {
-        // Check if MCP server is running
-        try {
-            const response = await frappe.call({
-                method: "erpnext_mcp_server.erpnext_mcp_server.api.mcp_server.get_status",
-                async: true
-            });
+    // async checkMCPServerStatus() {
+    //     // Check if MCP server is running
+    //     try {
+    //         const response = await frappe.call({
+    //             method: "erpnext_mcp_server.erpnext_mcp_server.api.mcp_server.get_status",
+    //             async: true
+    //         });
             
-            return response.message || { is_running: false, status: 'Unknown' };
-        } catch (error) {
-            console.error("Error checking MCP status:", error);
-            return { is_running: false, status: 'Error' };
-        }
-    }
+    //         return response.message || { is_running: false, status: 'Unknown' };
+    //     } catch (error) {
+    //         console.error("Error checking MCP status:", error);
+    //         return { is_running: false, status: 'Error' };
+    //     }
+    // }
 
     async startMCPServer() {
         try {

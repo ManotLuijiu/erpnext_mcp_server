@@ -6,7 +6,7 @@ from pathlib import Path
 
 # Import the server from mcp_server.py
 # from erpnext_mcp_server.mcp_server import server
-from erpnext_mcp_server.mcp.server import erp_server
+from erpnext_mcp_server.mcp_server_fetch.server import erp_server
 
 # Configure logging
 logging.basicConfig(

@@ -1,0 +1,17 @@
+{
+  "editor.defaultFormatter": "biomejs.biome",
+  "biome.enabled": true,
+  "editor.inlineSuggest.enabled": false,
+  "[json]": {
+    "editor.quickSuggestions": {
+      "strings": true
+    },
+    "editor.suggest.insertMode": "replace",
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true
+  },
+}

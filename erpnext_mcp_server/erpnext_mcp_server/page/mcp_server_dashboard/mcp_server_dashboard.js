@@ -365,28 +365,28 @@ class MCPServerDashboard {
     }, 10000)
   }
 
-  refresh_status() {
-    const me = this
-    frappe.call({
-      method: 'erpnext_mcp_server.api.mcp_server.get_mcp_server_status',
-      callback: function (r) {
-        if (r.message) {
-          me.update_status_display(r.message)
-        } else {
-          console.error('Failed to get MCP server status')
-        }
-      },
-      error: function (r) {
-        console.error('Error getting MCP server status:', r)
-        // Show error indicator
-        me.update_status_display({
-          status: 'Error',
-          is_running: false,
-          last_error: 'Failed to get server status',
-        })
-      },
-    })
-  }
+  // refresh_status() {
+  //   const me = this
+  //   frappe.call({
+  //     method: 'erpnext_mcp_server.api.mcp_server.get_mcp_server_status',
+  //     callback: function (r) {
+  //       if (r.message) {
+  //         me.update_status_display(r.message)
+  //       } else {
+  //         console.error('Failed to get MCP server status')
+  //       }
+  //     },
+  //     error: function (r) {
+  //       console.error('Error getting MCP server status:', r)
+  //       // Show error indicator
+  //       me.update_status_display({
+  //         status: 'Error',
+  //         is_running: false,
+  //         last_error: 'Failed to get server status',
+  //       })
+  //     },
+  //   })
+  // }
 
   update_status_display(data) {
     // Update status indicator

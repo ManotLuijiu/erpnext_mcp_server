@@ -7,19 +7,31 @@ description = "ERPNext management, file operations, read-only database access, a
 requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]
+keywords = ["http", "mcp", "llm", "automation", "erpnext", "openai", "gpt", "chatgpt"]
 dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.
-    "mcp[cli]",
+    "mcp",
+    "anthropic>=0.40.0",
     "python-dotenv",
     "openai",
     "ipykernel",
-    "httpx",
+    "httpx<0.28",
+    "markdownify>=0.13.1",
+    "protego>=0.3.1",
+    "readabilipy>=0.2.0",
     "docling",
     "asyncio",
     "pandas",
     "numpy",
     "pydantic",
+    "anyio",
+    "starlette",
+    "fastapi",
+    "uvicorn",
 ]
+
+[project.scripts]
+mcp-server-fetch = "mcp_server_fetch:main"
 
 [build-system]
 requires = ["flit_core >=3.4,<4"]
@@ -28,3 +40,7 @@ build-backend = "flit_core.buildapi"
 # These dependencies are only installed when developer mode is enabled
 [tool.bench.dev-dependencies]
 # package_name = "~=1.1.0"
+
+# Adding by Manot L.
+[tool.uv]
+dev-dependencies = ["pyright>=1.1.389", "ruff>=0.7.3"]

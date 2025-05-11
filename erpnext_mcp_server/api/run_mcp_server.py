@@ -136,7 +136,7 @@ def start_server():
 def get_server_logs(lines: int = 100):
     """Get the last N lines of server logs"""
     try:
-        log_file = os.path.join(frappe.utils.get_site_path(), "logs", "mcp_server.log")
+        log_file = os.path.join(get_site_path(), "logs", "mcp_server.log")
 
         if not os.path.exists(log_file):
             return "No log file found"

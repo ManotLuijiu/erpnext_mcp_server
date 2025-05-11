@@ -2,7 +2,7 @@ import os
 import sys
 import frappe
 from frappe import _
-from frappe.utils import get_sites_path
+from frappe.utils import get_site_path
 
 
 @frappe.whitelist()
@@ -113,7 +113,7 @@ def get_mcp_server_logs():
             diagnostic_info.append(f"Last Stop: {settings.last_stop_time}")
             diagnostic_info.append(f"Site: {frappe.local.site}")
             diagnostic_info.append(f"Python Executable: {sys.executable}")
-            diagnostic_info.append(f"Sites Path: {get_sites_path()}")
+            diagnostic_info.append(f"Sites Path: {get_site_path()}")
 
             if settings.last_error:
                 diagnostic_info.append(f"\nLast Error: {settings.last_error}")

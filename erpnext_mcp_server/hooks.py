@@ -20,6 +20,8 @@ navbar_items = [
     }
 ]
 
+commands = [{"name": "mcp", "function": "erpnext_mcp_server.commands.mcp"}]
+
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -40,7 +42,7 @@ navbar_items = [
 app_include_css = "erpnext_mcp_server.bundle.css"
 
 # app_include_js = "/assets/erpnext_mcp_server/js/erpnext_mcp_server.js"
-app_include_js = ["erpnext_mcp_server.bundle.js"]
+# app_include_js = ["erpnext_mcp_server.bundle.js"]
 
 # Define boot_session to load MCP Server status
 boot_session = "erpnext_mcp_server.api.boot.get_boot_info"

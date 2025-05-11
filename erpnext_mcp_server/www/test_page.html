@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MCP Server Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>MCP Server Test</h1>
+    
+    <button onclick="listTools()">List Tools</button>
+    <button onclick="callTool()">Call Tool</button>
+    
+    <textarea id="input" placeholder="Enter customer name">CUST-001</textarea>
+    
+    <div class="result" id="result"></div>
+    
+    <script>
+        const baseUrl = 'http://localhost:8100/mcp';
+        
+        async function listTools() {
+            try {
+                const response = await fetch(baseUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: "2.0",
+                        id: 1,
+                        method: "tools/list",
+                        params: {}
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('result').innerHTML = 
+                    '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error;
+            }
+        }
+        
+        async function callTool() {
+            const customerName = document.getElementById('input').value;
+            
+            try {
+                const response = await fetch(baseUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: "2.0",
+                        id: 2,
+                        method: "tools/call",
+                        params: {
+                            name: "get_customer_info",
+                            arguments: {
+                                customer_name: customerName
+                            }
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('result').innerHTML = 
+                    '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error;
+            }
+        }
+    </script>
+</body>
+</html>

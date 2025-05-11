@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from erpnext_mcp_server.mcp.server import erp_server
+from erpnext_mcp_server.mcp_server_fetch.server import erp_server
 
 
 @frappe.whitelist()
