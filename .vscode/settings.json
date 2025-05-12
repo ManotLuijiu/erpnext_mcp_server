@@ -6,6 +6,7 @@
     "markdown": false,
     "scminput": false
   },
+  "editor.autoIndent": "full",
   "biome.enabled": true,
   "editor.formatOnSave": true,
   "editor.wordWrap": "on",
@@ -42,6 +43,7 @@
       "source.organizeImports": "explicit"
     }
   },
+  "isort.args": ["--profile", "black"],
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.extraPaths": [
     "../../apps/frappe",

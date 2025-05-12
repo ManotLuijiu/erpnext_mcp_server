@@ -28,6 +28,8 @@ dependencies = [
     "starlette",
     "fastapi",
     "uvicorn",
+    "ag2",
+    "google-genai"
 ]
 
 [project.scripts]

@@ -20,7 +20,10 @@ navbar_items = [
     }
 ]
 
-commands = [{"name": "mcp", "function": "erpnext_mcp_server.commands.mcp"}]
+commands = [
+    # {"name": "mcp", "function": "erpnext_mcp_server.commands.mcp"},
+    "erpnext_mcp_server.commands.mcp_dev.commands",
+]
 
 
 # Each item in the list will be shown as an app in the apps page

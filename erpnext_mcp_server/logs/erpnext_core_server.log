@@ -1,3 +1,55 @@
 
 
 === Server started at 2025-05-12 02:42:57.983631 ===
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/manotlj/frappe-bench/apps/erpnext_mcp_server/erpnext_mcp_server/mcp_erpnext/tools/list_doctypes.py", line 97, in <module>
+  |     mcp.run(transport='stdio')
+  |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/mcp/server/fastmcp/server.py", line 159, in run
+  |     anyio.run(self.run_stdio_async)
+  |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/anyio/_core/_eventloop.py", line 74, in run
+  |     return async_backend.run(func, args, {}, backend_options)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 2310, in run
+  |     return runner.run(wrapper())
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/manotlj/miniconda3/lib/python3.12/asyncio/runners.py", line 118, in run
+  |     return self._loop.run_until_complete(task)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/manotlj/miniconda3/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+  |     return future.result()
+  |            ^^^^^^^^^^^^^^^
+  |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 2298, in wrapper
+  |     return await func(*args)
+  |            ^^^^^^^^^^^^^^^^^
+  |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/mcp/server/fastmcp/server.py", line 460, in run_stdio_async
+  |     async with stdio_server() as (read_stream, write_stream):
+  |                ^^^^^^^^^^^^^^
+  |   File "/Users/manotlj/miniconda3/lib/python3.12/contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/mcp/server/stdio.py", line 83, in stdio_server
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 772, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/mcp/server/stdio.py", line 62, in stdin_reader
+    |     async for line in stdin:
+    |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/anyio/_core/_fileio.py", line 83, in __aiter__
+    |     line = await self.readline()
+    |            ^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/anyio/_core/_fileio.py", line 99, in readline
+    |     return await to_thread.run_sync(self._fp.readline)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/anyio/to_thread.py", line 56, in run_sync
+    |     return await get_async_backend().run_sync_in_worker_thread(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 2470, in run_sync_in_worker_thread
+    |     return await future
+    |            ^^^^^^^^^^^^
+    |   File "/Users/manotlj/frappe-bench/env/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 967, in run
+    |     result = context.run(func, *args)
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^
+    | OSError: [Errno 5] Input/output error
+    +------------------------------------

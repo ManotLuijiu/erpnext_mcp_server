@@ -5,7 +5,14 @@
 tags
 node_modules
 __pycache__
+*.py[oc]
+build/
+dist/
+wheels/
 
 .env
 .env.local
 .env.production
+.venv
+
+.cache
