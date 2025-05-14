@@ -42,7 +42,7 @@ commands = [
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/erpnext_mcp_server/css/erpnext_mcp_server.css"
-app_include_css = "erpnext_mcp_server.bundle.css"
+app_include_css = ["erpnext_mcp_server.bundle.css"]
 
 # app_include_js = "/assets/erpnext_mcp_server/js/erpnext_mcp_server.js"
 # app_include_js = ["erpnext_mcp_server.bundle.js"]
