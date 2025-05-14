@@ -3,7 +3,10 @@ import sys
 from io import StringIO
 
 import frappe
+import requests
+from frappe import _
 from frappe.realtime import publish_realtime
+from frappe.utils import now_datetime
 from frappe.utils.response import build_response
 from rich.console import Console
 from rich.panel import Panel
@@ -13,6 +16,114 @@ from rich.text import Text
 # This will be your MCP server instance - we'll create a placeholder for now
 # In a real implementation, you'd import your MCP server
 mcp_server = None
+
+
+@frappe.whitelist()
+def get_mcp_settings():
+    """Get MCP Server settings"""
+    try:
+        # Check if user has permissions
+        if not frappe.has_permission("MCP Settings", "read"):
+            frappe.throw(
+                _("You don't have permission to access MCP Settings"),
+                frappe.PermissionError,
+            )
+
+        settings = frappe.get_single("MCP Settings")
+        return {
+            "api_url": settings.api_url,  # type: ignore
+            "websocket_url": settings.websocket_url,  # type: ignore
+            "auto_reconnect": settings.auto_reconnect,  # type: ignore
+        }
+    except Exception as e:
+        frappe.log_error(f"Error getting MCP settings: {str(e)}", "MCP Settings Error")
+        return None
+
+
+@frappe.whitelist()
+def get_mcp_token():
+    """Get authentication token from MCP server"""
+    try:
+        # Check if user has permissions
+        if not frappe.has_permission("MCP Settings", "read"):
+            frappe.throw(
+                _("You don't have permission to access MCP Server"),
+                frappe.PermissionError,
+            )
+
+        # Get MCP settings
+        settings = frappe.get_single("MCP Settings")
+
+        if not settings.api_url or not settings.api_key or not settings.api_secret:  # type: ignore
+            frappe.throw(_("MCP Server settings not configured correctly"))
+
+        # Make API request to get token
+        response = requests.post(
+            f"{settings.api_url}/auth/token",  # type: ignore
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(
+                {
+                    "api_key": settings.api_key,  # type: ignore
+                    "api_secret": settings.api_secret,  # type: ignore
+                    "user": frappe.session.user,  # Include user information for tracking
+                }
+            ),
+            timeout=int(settings.default_timeout or 30),  # type: ignore
+        )
+
+        if response.status_code == 200:
+            token_data = response.json()
+
+            # Store token in cache for future use (optional, we're also using localStorage)
+            expires_in = token_data.get("expires_in", 3600)
+            frappe.cache().set_value(
+                f"mcp_token:{frappe.session.user}",
+                token_data.get("token"),
+                expires_in_sec=expires_in,
+            )
+
+            # Return token with expiry information
+            return {"token": token_data.get("token"), "expires_in": expires_in}
+        else:
+            frappe.log_error(
+                f"Failed to get MCP token: {response.status_code} - {response.text}",
+                "MCP Token Request Error",
+            )
+            return {
+                "error": f"Failed to authenticate with MCP Server: {response.status_code}"
+            }
+
+    except Exception as e:
+        frappe.log_error(f"Error getting MCP token: {str(e)}", "MCP Token Error")
+        return {"error": str(e)}
+
+
+@frappe.whitelist()
+def log_terminal_event():
+    """Log terminal event for auditing"""
+    try:
+        event_type = frappe.local.form_dict.get("event_type")
+        session_id = frappe.local.form_dict.get("session_id")
+        command_type = frappe.local.form_dict.get("command_type")
+        details = frappe.local.form_dict.get("details")
+
+        # Create log entry
+        log = frappe.new_doc("MCP Terminal Log")
+        log.user = frappe.session.user  # type: ignore
+        log.timestamp = now_datetime()  # type: ignore
+        log.action = event_type  # type: ignore
+        log.session_id = session_id  # type: ignore
+        log.command_type = command_type  # type: ignore
+        log.details = details  # type: ignore
+        log.insert(ignore_permissions=True)
+        frappe.db.commit()
+
+        return {"success": True}
+    except Exception as e:
+        frappe.log_error(
+            f"Error logging terminal event: {str(e)}", "Terminal Event Log Error"
+        )
+        return {"error": str(e)}
 
 
 @frappe.whitelist(allow_guest=False)

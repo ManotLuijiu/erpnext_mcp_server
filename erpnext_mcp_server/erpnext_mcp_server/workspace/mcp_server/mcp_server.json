@@ -1,0 +1,92 @@
+{
+  "charts": [],
+  "content": "[{\"id\":\"g3Q0h5X3aK\",\"type\":\"header\",\"data\":{\"text\":\"MCP Server Management\",\"level\":4}},{\"id\":\"x-GDRJa9Jl\",\"type\":\"card\",\"data\":{\"card_name\":\"Terminal\",\"col\":4}},{\"id\":\"oSZpQ2rVE4\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuration\",\"col\":4}}]",
+  "creation": "2025-05-14 12:00:00.000000",
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "terminal",
+  "idx": 0,
+  "label": "MCP Server",
+  "links": [
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Terminal",
+      "link_count": 0,
+      "onboard": 0,
+      "type": "Card Break",
+      "icon": "terminal"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "MCP Terminal",
+      "link_count": 0,
+      "link_to": "mcp-terminal",
+      "link_type": "Page",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Configuration",
+      "link_count": 0,
+      "onboard": 0,
+      "type": "Card Break",
+      "icon": "setting-gear"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "MCP Settings",
+      "link_count": 0,
+      "link_to": "MCP Settings",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Terminal Logs",
+      "link_count": 0,
+      "link_to": "MCP Terminal Log",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    }
+  ],
+  "modified": "2023-05-14 12:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "ERPNext MCP Server",
+  "name": "MCP Server",
+  "owner": "Administrator",
+  "parent_page": "",
+  "public": 1,
+  "restrict_to_domain": "",
+  "roles": [
+    {
+      "role": "System Manager"
+    },
+    {
+      "role": "MCP Terminal User"
+    }
+  ],
+  "sequence_id": 1.0,
+  "shortcuts": [
+    {
+      "label": "Terminal",
+      "link_to": "mcp-terminal",
+      "type": "Page"
+    },
+    {
+      "label": "Settings",
+      "link_to": "MCP Settings",
+      "type": "DocType"
+    }
+  ],
+  "title": "MCP Server"
+}

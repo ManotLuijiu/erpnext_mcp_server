@@ -1,0 +1,90 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "creation": "2025-05-14 18:30:06.771207",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "api_settings_section",
+    "api_url",
+    "api_key",
+    "api_secret",
+    "column_break_4",
+    "websocket_url",
+    "default_timeout",
+    "auto_reconnect"
+  ],
+  "fields": [
+    {
+      "fieldname": "api_settings_section",
+      "fieldtype": "Section Break",
+      "label": "API Settings"
+    },
+    {
+      "fieldname": "api_url",
+      "fieldtype": "Data",
+      "label": "API URL",
+      "reqd": 1
+    },
+    {
+      "fieldname": "api_key",
+      "fieldtype": "Data",
+      "label": "API Key",
+      "reqd": 1
+    },
+    {
+      "fieldname": "api_secret",
+      "fieldtype": "Password",
+      "label": "API Secret",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_4",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "websocket_url",
+      "fieldtype": "Data",
+      "label": "WebSocket URL",
+      "reqd": 1
+    },
+    {
+      "default": "30",
+      "fieldname": "default_timeout",
+      "fieldtype": "Int",
+      "label": "Default Timeout (seconds)"
+    },
+    {
+      "default": "1",
+      "fieldname": "auto_reconnect",
+      "fieldtype": "Check",
+      "label": "Auto Reconnect"
+    }
+  ],
+  "grid_page_length": 50,
+  "index_web_pages_for_search": 1,
+  "issingle": 1,
+  "links": [],
+  "modified": "2025-05-14 18:30:06.771207",
+  "modified_by": "Administrator",
+  "module": "ERPNext MCP Server",
+  "name": "MCP Settings",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "read": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "row_format": "Dynamic",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

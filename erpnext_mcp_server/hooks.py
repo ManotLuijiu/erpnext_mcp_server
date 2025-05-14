@@ -22,7 +22,7 @@ navbar_items = [
 
 commands = [
     # {"name": "mcp", "function": "erpnext_mcp_server.commands.mcp"},
-    "erpnext_mcp_server.commands.mcp_dev.commands",
+    "erpnext_mcp_server.commands.mcp_dev.commands"
 ]
 
 
@@ -55,7 +55,7 @@ website_route_rules = [
     {
         "from_route": "/api/mcp/<path:path>",
         "to_route": "erpnext_mcp_server.api.mcp_proxy.query",
-    },
+    }
 ]
 
 # After site ready
@@ -180,6 +180,9 @@ after_install = "erpnext_mcp_server.install.after_install"
 
 # Scheduled Tasks
 # ---------------
+scheduler_events = {
+    "daily": ["erpnext_mcp_server.tasks.terminal_tokens.clear_expired_tokens"]
+}
 
 # scheduler_events = {
 # 	"all": [
