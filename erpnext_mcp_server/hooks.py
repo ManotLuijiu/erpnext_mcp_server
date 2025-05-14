@@ -181,7 +181,7 @@ after_install = "erpnext_mcp_server.install.after_install"
 # Scheduled Tasks
 # ---------------
 scheduler_events = {
-    "daily": ["erpnext_mcp_server.tasks.terminal_tokens.clear_expired_tokens"]
+    "hourly": ["erpnext_mcp_server.api.terminal.cleanup_terminal_sessions"]
 }
 
 # scheduler_events = {

@@ -31,17 +31,33 @@ erpnext_mcp_server.mcp_terminal.create = function(wrapper) {
   // root.render(<App />);
 
   // Create a ref to access the App's methods
-  const appRef = React.createRef();
+  const appRef = useRef();
 
    // Render our React app
   const root = createRoot(container);
   root.render(<App ref={appRef} />);
   
+  // Return methods that can be called from outside
   return {
     destroy: () => {
-      root.unmount();
+      try {
+        // Disconnect if connected
+        if (appRef.current) {
+          appRef.current.disconnectFromServer();
+        }
+        
+        // Unmount the component
+        root.unmount();
+        
+        // Also remove the container element
+        if (container && container.parentNode) {
+          container.parentNode.removeChild(container);
+        }
+      } catch (error) {
+        console.error('Error destroying MCP terminal:', error);
+      }
     },
-     connect: () => {
+    connect: () => {
       if (appRef.current) {
         return appRef.current.connectToServer();
       }

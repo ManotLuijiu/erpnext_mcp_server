@@ -3,21 +3,21 @@ import { XTerm } from 'react-xtermjs';
 import { FitAddon } from '@xterm/addon-fit';
 import { AttachAddon } from '@xterm/addon-attach';
 
+import './styles/xterm.css'
+import './styles/terminal.css'
+
 // Use forwardRef to allow parent components to get a ref to this component
 const App = forwardRef((props, ref) => {
   const [isConnected, setIsConnected] = useState(false);
   const [status, setStatus] = useState({ type: 'disconnected', message: 'Disconnected' });
   const [terminalHeight, setTerminalHeight] = useState(400);
   const [addons, setAddons] = useState([]);
-  const [tokenStatus, setTokenStatus] = useState('');
   const [sessionId, setSessionId] = useState(null);
 
   // Create refs
-  const terminalRef = useRef(null);
+  const xtermRef = useRef(null);
   const containerRef = useRef(null);
   const websocketRef = useRef(null);
-  
-  // Create fit addon
   const fitAddonRef = useRef(new FitAddon());
   
   // Constants
@@ -45,27 +45,21 @@ const App = forwardRef((props, ref) => {
     }
   }));
 
-  // Generate a unique session ID for tracking terminal usage
-  const generateSessionId = useCallback(() => {
-    return 'term_' + Math.random().toString(36).substring(2, 15) + 
-           Math.random().toString(36).substring(2, 15);
-  }, []);
-
-  // Initialize session ID once
-  useEffect(() => {
-    if (!sessionId) {
-      setSessionId(generateSessionId());
-    }
-    
-    // Initialize addons
-    setAddons([fitAddonRef.current]);
-  }, [generateSessionId, sessionId]);
-
   // Update terminal dimensions when window is resized
   useEffect(() => {
     const handleResize = () => {
       if (fitAddonRef.current) {
         setTimeout(() => fitAddonRef.current.fit(), 100);
+        
+        // Also send resize info to server if connected
+        if (isConnected && websocketRef.current && xtermRef.current) {
+          const { cols, rows } = xtermRef.current.terminal;
+          sendWebSocketMessage({
+            type: 'resize',
+            cols,
+            rows
+          });
+        }
       }
     };
 
@@ -73,16 +67,21 @@ const App = forwardRef((props, ref) => {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [isConnected]);
 
   // Clean up WebSocket on unmount
   useEffect(() => {
     return () => {
-      if (websocketRef.current) {
-        websocketRef.current.close();
-      }
+      disconnect();
     };
   }, []);
+  
+  // Function to send message through WebSocket
+  const sendWebSocketMessage = (data) => {
+    if (websocketRef.current && websocketRef.current.readyState === WebSocket.OPEN) {
+      websocketRef.current.send(JSON.stringify(data));
+    }
+  };
 
   // Update the Connect MCP button state
   const updateConnectButton = useCallback((connected) => {
@@ -100,15 +99,13 @@ const App = forwardRef((props, ref) => {
 
   // Log terminal events for auditing
   const logTerminalEvent = useCallback((eventType, details = null, commandType = null) => {
-    if (!sessionId) return;
-    
     frappe.call({
-      method: 'erpnext_mcp_server.api.terminal.log_terminal_event',
+      method: 'erpnext_mcp_server.api.log_terminal_session',
       args: {
-        event_type: eventType,
         session_id: sessionId,
-        command_type: commandType,
-        details: details
+        action: eventType,
+        details: details,
+        command_type: commandType
       },
       callback: function(r) {
         if (r.exc) {
@@ -118,92 +115,18 @@ const App = forwardRef((props, ref) => {
     });
   }, [sessionId]);
 
-  // Token management functions
-  const encryptToken = (token) => {
-    try {
-      const key = frappe.session.user + '_terminal_key';
-      return btoa(unescape(encodeURIComponent(JSON.stringify({
-        token,
-        key,
-        timestamp: Date.now()
-      }))));
-    } catch (error) {
-      console.error('Error encrypting token', error);
-      return null;
-    }
-  };
-
-  const decryptToken = (encryptedToken) => {
-    try {
-      const data = JSON.parse(decodeURIComponent(escape(atob(encryptedToken))));
-      if (data.key !== frappe.session.user + '_terminal_key') {
-        return null;
-      }
-      return data.token;
-    } catch (error) {
-      console.error('Error decrypting token', error);
-      return null;
-    }
-  };
-
-  const storeToken = (token, expiresIn) => {
-    const expiryDate = new Date();
-    expiryDate.setSeconds(expiryDate.getSeconds() + expiresIn);
-    
-    const tokenData = {
-      expires_at: expiryDate.toISOString(),
-      expires_in: expiresIn
-    };
-    
-    const encryptedToken = encryptToken(token);
-    localStorage.setItem('mcp_token', encryptedToken);
-    localStorage.setItem('mcp_token_data', JSON.stringify(tokenData));
-  };
-
-  const getStoredToken = () => {
-    const encryptedToken = localStorage.getItem('mcp_token');
-    if (!encryptedToken) return null;
-    
-    return decryptToken(encryptedToken);
-  };
-
-  const getToken = async (silent = false) => {
-    if (!silent) {
-      setTokenStatus('Requesting token...');
-    }
-    
+  // Create a terminal session
+  const createTerminalSession = async () => {
     try {
       return new Promise((resolve, reject) => {
         frappe.call({
-          method: 'erpnext_mcp_server.api.terminal.get_mcp_token',
+          method: 'erpnext_mcp_server.api.create_terminal_session',
           callback: function(r) {
-            if (r.message && r.message.token) {
-              const token = r.message.token;
-              const expiresIn = r.message.expires_in || 3600;
-              
-              storeToken(token, expiresIn);
-              
-              if (!silent) {
-                setTokenStatus('Token received');
-                frappe.show_alert({
-                  message: __('Token successfully retrieved'),
-                  indicator: 'green'
-                }, 3);
-              }
-              
-              logTerminalEvent('Token Request', 'Token successfully retrieved');
-              resolve({ token, expires_in: expiresIn });
+            if (r.message && r.message.success) {
+              setSessionId(r.message.session_id);
+              resolve(r.message.session_id);
             } else {
-              if (!silent) {
-                setTokenStatus('Failed to get token');
-                frappe.show_alert({
-                  message: __('Failed to retrieve token'),
-                  indicator: 'red'
-                }, 5);
-              }
-              
-              logTerminalEvent('Error', 'Failed to retrieve token');
-              reject(new Error(r.message?.error || 'Failed to get token'));
+              reject(new Error(r.message?.error || 'Failed to create terminal session'));
             }
           },
           error: function(err) {
@@ -212,140 +135,104 @@ const App = forwardRef((props, ref) => {
         });
       });
     } catch (error) {
-      console.error('Error getting token:', error);
-      if (!silent) {
-        setTokenStatus('Error getting token');
-      }
-      return null;
+      console.error('Error creating terminal session:', error);
+      throw error;
     }
   };
 
-  const refreshToken = async () => {
-    try {
-      // Check current token
-      const storedToken = getStoredToken();
-      const tokenData = localStorage.getItem('mcp_token_data');
-      
-      if (!storedToken || !tokenData) {
-        // No token found, get a new one
-        return await getToken(true);
-      }
-      
-      // Parse token data
-      const { expires_at } = JSON.parse(tokenData);
-      
-      // Check if token is about to expire (within 5 minutes)
-      const now = Date.now();
-      const expiryTime = new Date(expires_at).getTime();
-      const fiveMinutesInMs = 5 * 60 * 1000;
-      
-      if (expiryTime - now < fiveMinutesInMs) {
-        if (terminalRef.current) {
-          terminalRef.current.terminal.writeln('\r\n\x1b[33mToken is about to expire, refreshing...\x1b[0m');
-        }
-        return await getToken(true);
-      }
-      
-      return { token: storedToken };
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      return null;
-    }
-  };
-
-  // Get MCP Settings from Frappe backend
-  const getMCPSettings = async () => {
-    return new Promise((resolve, reject) => {
-      frappe.call({
-        method: 'erpnext_mcp_server.api.terminal.get_mcp_settings',
-        callback: function(r) {
-          if (r.message) {
-            resolve(r.message);
-          } else {
-            reject(new Error('Failed to get MCP settings'));
-          }
-        },
-        error: function(err) {
-          reject(err);
-        }
-      });
-    });
-  };
-
-  // Connect to the MCP Server via WebSocket
+  // Connect to the MCP Server
   const connect = async () => {
     try {
       // Update status
       setStatus({ type: 'connecting', message: 'Connecting...' });
       
-      // Log connection attempt
-      logTerminalEvent('Connect', 'Terminal connection initiated');
-      
       // Update button state
       updateConnectButton(false);
       $('.mcp-connect-btn').html('<i class="fa fa-spinner fa-spin mr-1"></i> ' + __('Connecting...'));
       
-      // Get settings
-      const settings = await getMCPSettings();
+      // Create a terminal session
+      const session_id = await createTerminalSession();
       
-      if (!settings || !settings.websocket_url) {
-        if (terminalRef.current) {
-          terminalRef.current.terminal.writeln('\r\n\x1b[31mError: WebSocket URL not configured in MCP Settings\x1b[0m');
-        }
-        setStatus({ type: 'error', message: 'Configuration error' });
-        updateConnectButton(false);
-        return;
+      // Get the WebSocket URL
+      const site_name = frappe.boot.sitename || '';
+      const websocket_url = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//` +
+                            `${window.location.host}/${site_name}/api/websocket/terminal`;
+      
+      // Close any existing connection
+      if (websocketRef.current) {
+        websocketRef.current.close();
       }
       
-      // Get token with automatic refresh if needed
-      const tokenResult = await refreshToken();
-      if (!tokenResult || !tokenResult.token) {
-        if (terminalRef.current) {
-          terminalRef.current.terminal.writeln('\r\n\x1b[31mError: Failed to get authentication token\x1b[0m');
-        }
-        setStatus({ type: 'error', message: 'Authentication error' });
-        updateConnectButton(false);
-        return;
-      }
-      const token = tokenResult.token;
-      
-      // Close existing connection if any
-      disconnect();
-      
-      // Calculate terminal dimensions
-      const dimensions = fitAddonRef.current.proposeDimensions();
-      const cols = dimensions ? dimensions.cols : 80;
-      const rows = dimensions ? dimensions.rows : 24;
-      
-      // Build WebSocket URL with parameters
-      const wsUrl = new URL(settings.websocket_url);
-      wsUrl.searchParams.append('token', token);
-      wsUrl.searchParams.append('cols', cols.toString());
-      wsUrl.searchParams.append('rows', rows.toString());
-      
-      // Create WebSocket connection
-      websocketRef.current = new WebSocket(wsUrl.toString());
+      // Create new WebSocket connection
+      websocketRef.current = new WebSocket(websocket_url);
       
       websocketRef.current.onopen = () => {
-        // Create attach addon
-        const attachAddon = new AttachAddon(websocketRef.current);
-        setAddons([fitAddonRef.current, attachAddon]);
-        
-        // Update state
-        setIsConnected(true);
-        setStatus({ type: 'connected', message: 'Connected' });
-        
-        // Update button
-        updateConnectButton(true);
-        
-        // Clear terminal and focus
-        if (terminalRef.current) {
-          terminalRef.current.terminal.clear();
-          terminalRef.current.terminal.focus();
+        // Send authentication data
+        sendWebSocketMessage({
+          session_id: session_id
+        });
+      };
+      
+      websocketRef.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.error) {
+            // Handle error
+            if (xtermRef.current) {
+              xtermRef.current.terminal.writeln(`\r\n\x1b[31mError: ${data.error}\x1b[0m`);
+            }
+            
+            if (data.close) {
+              disconnect();
+            }
+          } else if (data.message === 'Authentication successful') {
+            // Authentication successful, terminal is ready
+            setIsConnected(true);
+            setStatus({ type: 'connected', message: 'Connected' });
+            
+            // Update button
+            updateConnectButton(true);
+            
+            // Set up the terminal with dimensions
+            if (xtermRef.current && fitAddonRef.current) {
+              fitAddonRef.current.fit();
+              const { cols, rows } = xtermRef.current.terminal;
+              
+              // Send terminal dimensions
+              sendWebSocketMessage({
+                type: 'resize',
+                cols,
+                rows
+              });
+              
+              // Focus the terminal
+              xtermRef.current.terminal.focus();
+            }
+            
+            // Set up ping interval to keep the connection alive
+            const pingInterval = setInterval(() => {
+              if (websocketRef.current?.readyState === WebSocket.OPEN) {
+                sendWebSocketMessage({
+                  type: 'ping',
+                  time: Date.now()
+                });
+              } else {
+                clearInterval(pingInterval);
+              }
+            }, 30000); // 30 second ping
+            
+            // Store interval ID for cleanup
+            websocketRef.current.pingInterval = pingInterval;
+          } else if (data.type === 'output') {
+            // Handle terminal output
+            if (xtermRef.current && data.data) {
+              xtermRef.current.terminal.write(data.data);
+            }
+          }
+        } catch (error) {
+          console.error('Error handling WebSocket message:', error);
         }
-        
-        // Log successful connection
-        logTerminalEvent('Connect', 'Terminal connection established', 'Shell');
       };
       
       websocketRef.current.onclose = (event) => {
@@ -354,15 +241,31 @@ const App = forwardRef((props, ref) => {
       
       websocketRef.current.onerror = (error) => {
         console.error('WebSocket error:', error);
-        if (terminalRef.current) {
-          terminalRef.current.terminal.writeln('\r\n\x1b[31mWebSocket error occurred\x1b[0m');
+        if (xtermRef.current) {
+          xtermRef.current.terminal.writeln('\r\n\x1b[31mWebSocket error occurred\x1b[0m');
         }
         logTerminalEvent('Error', 'WebSocket error occurred');
       };
+      
+      // Set up terminal input handler
+      if (xtermRef.current) {
+        // Remove any existing listeners
+        const terminal = xtermRef.current.terminal;
+        
+        // Add data event listener
+        terminal.onData((data) => {
+          if (websocketRef.current?.readyState === WebSocket.OPEN) {
+            sendWebSocketMessage({
+              type: 'input',
+              data: data
+            });
+          }
+        });
+      }
     } catch (error) {
       console.error('Connection error:', error);
-      if (terminalRef.current) {
-        terminalRef.current.terminal.writeln(`\r\n\x1b[31mError: ${error.message || 'Connection failed'}\x1b[0m`);
+      if (xtermRef.current) {
+        xtermRef.current.terminal.writeln(`\r\n\x1b[31mError: ${error.message || 'Connection failed'}\x1b[0m`);
       }
       setStatus({ type: 'error', message: 'Connection error' });
       updateConnectButton(false);
@@ -370,24 +273,51 @@ const App = forwardRef((props, ref) => {
     }
   };
 
-  // Disconnect from the WebSocket
+  // Disconnect from the MCP Server
   const disconnect = () => {
-    if (websocketRef.current) {
-      websocketRef.current.close();
+    try {
+      // Close WebSocket connection
+      if (websocketRef.current) {
+        // Clear ping interval
+        if (websocketRef.current.pingInterval) {
+          clearInterval(websocketRef.current.pingInterval);
+        }
+        
+        // Close the connection
+        websocketRef.current.close();
+        websocketRef.current = null;
+      }
+      
+      // Close the terminal session on the server
+      if (sessionId) {
+        frappe.call({
+          method: 'erpnext_mcp_server.api.close_terminal_session',
+          args: {
+            session_id: sessionId
+          },
+          callback: function(r) {
+            if (!r.message || !r.message.success) {
+              console.error('Failed to close terminal session:', r.message?.error || 'Unknown error');
+            }
+          }
+        });
+      }
+      
+      // Update state
+      setIsConnected(false);
+      setStatus({ type: 'disconnected', message: 'Disconnected' });
+      
+      // Update button
+      updateConnectButton(false);
+      
+      // Log disconnection
+      logTerminalEvent('Disconnect', 'Terminal disconnected');
+      
+      // Clear session ID
+      setSessionId(null);
+    } catch (error) {
+      console.error('Error disconnecting:', error);
     }
-    
-    // Remove the attach addon from terminal
-    setAddons([fitAddonRef.current]);
-    
-    // Update state
-    setIsConnected(false);
-    setStatus({ type: 'disconnected', message: 'Disconnected' });
-    
-    // Update button
-    updateConnectButton(false);
-    
-    // Log disconnection
-    logTerminalEvent('Disconnect', 'Terminal disconnected');
   };
 
   // Handle WebSocket disconnection
@@ -395,20 +325,24 @@ const App = forwardRef((props, ref) => {
     // Only handle if currently connected
     if (!isConnected) return;
     
+    // Clear interval if exists
+    if (websocketRef.current && websocketRef.current.pingInterval) {
+      clearInterval(websocketRef.current.pingInterval);
+    }
+    
     setIsConnected(false);
     setStatus({ type: 'disconnected', message: 'Disconnected' });
-    setAddons([fitAddonRef.current]);
     
     // Update button
     updateConnectButton(false);
     
-    if (terminalRef.current) {
+    if (xtermRef.current) {
       if (event.wasClean) {
-        terminalRef.current.terminal.writeln('\r\n\x1b[33mConnection closed cleanly\x1b[0m');
+        xtermRef.current.terminal.writeln('\r\n\x1b[33mConnection closed cleanly\x1b[0m');
       } else {
-        terminalRef.current.terminal.writeln(`\r\n\x1b[31mConnection closed unexpectedly. Code: ${event.code}\x1b[0m`);
+        xtermRef.current.terminal.writeln(`\r\n\x1b[31mConnection closed unexpectedly. Code: ${event.code}\x1b[0m`);
         if (event.reason) {
-          terminalRef.current.terminal.writeln(`\x1b[31mReason: ${event.reason}\x1b[0m`);
+          xtermRef.current.terminal.writeln(`\x1b[31mReason: ${event.reason}\x1b[0m`);
         }
       }
     }
@@ -444,7 +378,19 @@ const App = forwardRef((props, ref) => {
       
       // Fit terminal to new size
       if (fitAddonRef.current) {
-        setTimeout(() => fitAddonRef.current.fit(), 100);
+        setTimeout(() => {
+          fitAddonRef.current.fit();
+          
+          // Send resize info to server if connected
+          if (isConnected && websocketRef.current && xtermRef.current) {
+            const { cols, rows } = xtermRef.current.terminal;
+            sendWebSocketMessage({
+              type: 'resize',
+              cols,
+              rows
+            });
+          }
+        }, 100);
       }
     };
     
@@ -454,15 +400,27 @@ const App = forwardRef((props, ref) => {
 
   // Toggle terminal size between min and max
   const toggleSize = () => {
-    if (terminalHeight === MAX_TERMINAL_HEIGHT) {
-      setTerminalHeight(MIN_TERMINAL_HEIGHT);
-    } else {
-      setTerminalHeight(MAX_TERMINAL_HEIGHT);
-    }
+    const newHeight = terminalHeight === MAX_TERMINAL_HEIGHT 
+      ? MIN_TERMINAL_HEIGHT
+      : MAX_TERMINAL_HEIGHT;
+    
+    setTerminalHeight(newHeight);
     
     // Fit terminal to new size
     if (fitAddonRef.current) {
-      setTimeout(() => fitAddonRef.current.fit(), 100);
+      setTimeout(() => {
+        fitAddonRef.current.fit();
+        
+        // Send resize info to server if connected
+        if (isConnected && websocketRef.current && xtermRef.current) {
+          const { cols, rows } = xtermRef.current.terminal;
+          sendWebSocketMessage({
+            type: 'resize',
+            cols,
+            rows
+          });
+        }
+      }, 100);
     }
   };
 
@@ -481,6 +439,7 @@ const App = forwardRef((props, ref) => {
         <div className="terminal-status">
           <span className={`terminal-status-indicator ${status.type}`}></span>
           <span>{status.message}</span>
+          {sessionId && <span className="ml-2 text-muted text-xs">Session: {sessionId.substring(0, 8)}...</span>}
         </div>
         
         <div className="terminal-controls">
@@ -492,18 +451,23 @@ const App = forwardRef((props, ref) => {
           </button>
           
           <button 
-            className="btn btn-sm btn-default ml-2"
-            onClick={() => getToken()}
-          >
-            Get Token
-            {tokenStatus && <span className="ml-2">{tokenStatus}</span>}
-          </button>
-          
-          <button 
             className="btn btn-sm btn-icon ml-2"
             onClick={toggleSize}
+            title={terminalHeight === MAX_TERMINAL_HEIGHT ? 'Minimize' : 'Maximize'}
           >
             <i className={`fa fa-${terminalHeight === MAX_TERMINAL_HEIGHT ? 'compress' : 'expand'}`}></i>
+          </button>
+          
+          <button
+            className="btn btn-sm btn-icon ml-2"
+            onClick={() => {
+              if (xtermRef.current) {
+                xtermRef.current.terminal.clear();
+              }
+            }}
+            title="Clear terminal"
+          >
+            <i className="fa fa-eraser"></i>
           </button>
         </div>
       </div>
@@ -513,30 +477,20 @@ const App = forwardRef((props, ref) => {
         className="terminal-container"
         style={{ height: `${terminalHeight}px` }}
       >
-        {addons.length >= 2 ? (
-          <XTerm 
-            ref={terminalRef}
-            className="xterm" 
-            addons={addons}
-            options={{
-              cursorBlink: true,
-              fontFamily: 'monospace',
-              fontSize: 14,
-              theme: {
-                background: '#1e1e1e',
-                foreground: '#f0f0f0'
-              }
-            }}
-          />
-        ) : (
-          <div className="terminal-placeholder">
-            <div className="terminal-placeholder-content">
-              <i className="fa fa-terminal fa-2x mb-2"></i>
-              <p>Terminal ready</p>
-              <p className="text-muted">Click "Connect" to start a session or use the "Connect MCP" button above</p>
-            </div>
-          </div>
-        )}
+        <XTerm 
+          ref={xtermRef}
+          className="xterm" 
+          addons={[fitAddonRef.current]}
+          options={{
+            cursorBlink: true,
+            fontFamily: 'monospace',
+            fontSize: 14,
+            theme: {
+              background: '#1e1e1e',
+              foreground: '#f0f0f0'
+            }
+          }}
+        />
       </div>
     </div>
   );

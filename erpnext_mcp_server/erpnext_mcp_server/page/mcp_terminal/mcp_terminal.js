@@ -22,18 +22,6 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
     }
   };
 
-  // Add SVG terminal icon to page actions
-  // This adds the SVG to the page's header actions area
-  // const svgHtml = `
-  //   <div class="page-icon-group">
-  //     <div class="page-icon">
-  //       <img src="/assets/erpnext_mcp_server/images/icons/terminal-svgrepo-com.svg"
-  //            alt="Terminal Icon"
-  //            style="width: 24px; height: 24px; margin-right: 8px;">
-  //     </div>
-  //   </div>
-  // `;
-
   // Add SVG terminal icon to the page header
   try {
     // Option 1: Try to add to standard Frappe page actions
@@ -81,47 +69,15 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
     // Non-critical error, continue with the rest of the page setup
   }
 
-  // Add page actions
-  page.add_menu_item('Settings', function () {
-    frappe.set_route('Form', 'MCP Settings');
-  });
-
-  page.add_menu_item('Clear Token', function () {
-    localStorage.removeItem('mcp_token');
-    localStorage.removeItem('mcp_token_data');
-    frappe.show_alert(
-      {
-        message: __('MCP token cleared'),
-        indicator: 'blue',
-      },
-      3,
-    );
-  });
-
+  // Add page menu items
   page.add_menu_item('View Logs', function () {
     frappe.set_route('List', 'MCP Terminal Log');
   });
 
-  // Create a global connect function to be used by the button
-  // frappe.mcp_terminal_connect = function () {
-  //   if (frappe.mcp_terminal?.connect) {
-  //     frappe.mcp_terminal.connect();
-
-  //     // Update button UI
-  //     $('.mcp-connect-btn')
-  //       .removeClass('btn-primary')
-  //       .addClass('btn-default')
-  //       .html(__('Connecting...'));
-  //   }
-  // };
-
-  // Load CSS styles
-  // frappe.require(['erpnext_mcp_server/css/mcp_terminal.css']);
-
-  // Add help section
+  // Add help section with connect button and SVG icon
   const helpHTML = `
     <div class="mcp-terminal-help mb-4">
-      <div class="alert">
+      <div class="alert alert-info">
         <div class="d-flex justify-content-between align-items-center">
           <div class="flex-grow-1 d-flex">
             <img src="/assets/erpnext_mcp_server/images/icons/terminal-svgrepo-com.svg" 
@@ -143,28 +99,21 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
   `;
   $(page.body).prepend(helpHTML);
 
-  // Add the terminal class to the wrapper for styling
-  // $(wrapper).addClass('mcp-terminal-page')
-
   // Initialize the terminal
   frappe.require('mcp_terminal.bundle.jsx', () => {
-    frappe.mcp_terminal = erpnext_mcp_server.mcp_terminal.create(page.body);
-    // frappe.mcp_terminal = new frappe.ui.McpTerminal({
-    //   page: page,
-    //   wrapper: page.body,
-    // })
+    // Create a container div and append it to page.body
+    const terminalContainer = $(
+      '<div class="mcp-terminal-container"></div>',
+    ).appendTo(page.body);
+    // Pass the DOM element, not the jQuery object
+    frappe.mcp_terminal = erpnext_mcp_server.mcp_terminal.create(
+      terminalContainer[0],
+    );
   });
 };
 
-// frappe.pages['mcp-terminal'].on_page_hide = function () {
-//   // Optionally destroy the terminal instance when the page is hidden
-//   if (frappe.pages['mcp_terminal'].mcp_terminal) {
-//     frappe.pages['mcp_terminal'].mcp_terminal.destroy();
-//   }
-// };
-
 frappe.pages['mcp-terminal'].on_page_hide = function () {
-  // Optionally destroy the terminal instance when the page is hidden
+  // Destroy the terminal instance when the page is hidden
   if (frappe.mcp_terminal) {
     frappe.mcp_terminal.destroy();
   }
