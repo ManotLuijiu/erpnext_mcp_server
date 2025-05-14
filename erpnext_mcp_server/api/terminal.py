@@ -3,6 +3,7 @@ import sys
 from io import StringIO
 
 import frappe
+from frappe.realtime import publish_realtime
 from frappe.utils.response import build_response
 from rich.console import Console
 from rich.panel import Panel
@@ -12,6 +13,30 @@ from rich.text import Text
 # This will be your MCP server instance - we'll create a placeholder for now
 # In a real implementation, you'd import your MCP server
 mcp_server = None
+
+
+@frappe.whitelist(allow_guest=False)
+def process_command(command):
+    """Process a terminal command and return formatted output"""
+    handler = MCPTerminalHandler()
+    return handler.process_command(command)
+
+
+def socket_process_command(command, socket):
+    """Socket.IO handler for processing commands"""
+    handler = MCPTerminalHandler()
+    output = handler.process_command(command)
+
+    # Send the response back through Socket.IO
+    publish_realtime("terminal_response", {"output": output}, user=frappe.session.user)
+
+
+# Register Socket.IO event handler
+# if hasattr(frappe, 'realtime'):
+#     @frappe.realtime.socketio.on('terminal_command')
+#     def handle_terminal_command(data):
+#         if 'command' in data:
+#             socket_process_command(data['command'], frappe.realtime.socketio)
 
 
 @frappe.whitelist(allow_guest=False)
@@ -27,8 +52,8 @@ def connect():
 class MCPTerminalHandler:
     """WebSocket handler for the MCP terminal"""
 
-    def __init__(self, request):
-        self.request = request
+    def __init__(self):
+        # self.request = request
         self.user = frappe.session.user
         self.console = Console(file=StringIO(), highlight=True, record=True)
 

@@ -2,10 +2,6 @@ import * as React from 'react';
 import App from './App';
 import { createRoot } from 'react-dom/client';
 
-// Add CSS for terminal
-// frappe.require_css('/assets/erpnext_mcp_server/css/xterm.css');
-// frappe.require_css('/assets/erpnext_mcp_server/css/terminal.css');
-
 class McpTerminal {
   constructor({ page, wrapper }) {
     this.$wrapper = $(wrapper);
@@ -17,10 +13,6 @@ class McpTerminal {
   init() {
     this.setup_page_actions();
     this.setup_app();
-    // Load xterm FitAddon before setting up the app
-    // frappe.require('/assets/erpnext_mcp_server/js/xterm-addon-fit.js', () => {
-    //   this.setup_app();
-    // });
   }
 
   setup_page_actions() {
