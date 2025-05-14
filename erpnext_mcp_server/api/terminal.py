@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from io import StringIO
 
@@ -29,14 +30,73 @@ def get_mcp_settings():
                 frappe.PermissionError,
             )
 
+        # Check if settings exist, if not create them
+        if not frappe.db.exists("MCP Settings"):
+            create_default_settings()
+
         settings = frappe.get_single("MCP Settings")
+
+        # If settings are empty, try to get from environment variables
+        api_url = settings.api_url or os.environ.get("MCP_API_URL")
+        websocket_url = settings.websocket_url or os.environ.get("MCP_WEBSOCKET_URL")
+        auto_reconnect = settings.auto_reconnect
+
+        # Also check Frappe site config for settings
+        site_config = frappe.get_site_config()
+        if not api_url and site_config.get("mcp_api_url"):
+            api_url = site_config.get("mcp_api_url")
+        if not websocket_url and site_config.get("mcp_websocket_url"):
+            websocket_url = site_config.get("mcp_websocket_url")
+
         return {
-            "api_url": settings.api_url,  # type: ignore
-            "websocket_url": settings.websocket_url,  # type: ignore
-            "auto_reconnect": settings.auto_reconnect,  # type: ignore
+            "api_url": api_url,
+            "websocket_url": websocket_url,
+            "auto_reconnect": auto_reconnect,
+            "is_configured": bool(api_url and websocket_url),
         }
     except Exception as e:
         frappe.log_error(f"Error getting MCP settings: {str(e)}", "MCP Settings Error")
+        return {
+            "api_url": None,
+            "websocket_url": None,
+            "auto_reconnect": 0,
+            "is_configured": False,
+            "error": str(e),
+        }
+
+
+def create_default_settings():
+    """Create default MCP settings document"""
+    try:
+        settings = frappe.new_doc("MCP Settings")
+
+        # Try to get values from environment variables
+        settings.api_url = os.environ.get("MCP_API_URL", "")
+        settings.websocket_url = os.environ.get("MCP_WEBSOCKET_URL", "")
+        settings.api_key = os.environ.get("MCP_API_KEY", "")
+        settings.api_secret = os.environ.get("MCP_API_SECRET", "")
+        settings.default_timeout = 30
+        settings.auto_reconnect = 1
+
+        # Also check Frappe site config for settings
+        site_config = frappe.get_site_config()
+        if not settings.api_url and site_config.get("mcp_api_url"):
+            settings.api_url = site_config.get("mcp_api_url")
+        if not settings.websocket_url and site_config.get("mcp_websocket_url"):
+            settings.websocket_url = site_config.get("mcp_websocket_url")
+        if not settings.api_key and site_config.get("mcp_api_key"):
+            settings.api_key = site_config.get("mcp_api_key")
+        if not settings.api_secret and site_config.get("mcp_api_secret"):
+            settings.api_secret = site_config.get("mcp_api_secret")
+
+        settings.insert(ignore_permissions=True)
+        frappe.db.commit()
+
+        return settings
+    except Exception as e:
+        frappe.log_error(
+            f"Error creating default MCP settings: {str(e)}", "MCP Settings Error"
+        )
         return None
 
 
@@ -53,6 +113,8 @@ def get_mcp_token():
 
         # Get MCP settings
         settings = frappe.get_single("MCP Settings")
+
+        print(f"settings {settings}")
 
         if not settings.api_url or not settings.api_key or not settings.api_secret:  # type: ignore
             frappe.throw(_("MCP Server settings not configured correctly"))

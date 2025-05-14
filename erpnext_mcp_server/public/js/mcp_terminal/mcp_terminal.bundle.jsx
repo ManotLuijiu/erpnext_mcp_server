@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useRef} from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 
@@ -8,35 +8,56 @@ import App from './App';
 frappe.provide('erpnext_mcp_server.mcp_terminal');
 
 erpnext_mcp_server.mcp_terminal.create = function(wrapper) {
+  // Ensure we have a DOM element, not a jQuery object
+  const containerElement = wrapper instanceof jQuery ? wrapper[0] : wrapper;
+
   // Create a container for our React app
   const container = document.createElement('div');
   container.className = 'mcp-terminal-page-wrapper';
-  wrapper.appendChild(container);
+  // wrapper.appendChild(container);
+
+  // Append to the container element
+  if (containerElement && containerElement.appendChild) {
+    containerElement.appendChild(container);
+  } else {
+    console.error('Invalid wrapper element provided to mcp_terminal.create');
+    // Fallback: try to append to body if wrapper is invalid
+    document.body.appendChild(container);
+  }
   
   // Render our React app
   // const root = createRoot(container);
   // let appRef = null;
   // root.render(<App />);
 
-  // Create React root
+  // Create a ref to access the App's methods
+  const appRef = React.createRef();
+
+   // Render our React app
   const root = createRoot(container);
-  
-  // Create app ref to access its methods
-  let appRef = null;
-  
-  // Render our React app
-  root.render(<App ref={(ref) => { appRef = ref; }} />);
+  root.render(<App ref={appRef} />);
   
   return {
     destroy: () => {
       root.unmount();
     },
-    connect: () => {
-      if (appRef && appRef.connectToServer) {
-        appRef.connectToServer();
-        return true
+     connect: () => {
+      if (appRef.current) {
+        return appRef.current.connectToServer();
       }
-      return false
+      return false;
+    },
+    disconnect: () => {
+      if (appRef.current) {
+        return appRef.current.disconnectFromServer();
+      }
+      return false;
+    },
+    getStatus: () => {
+      if (appRef.current) {
+        return appRef.current.getConnectionStatus();
+      }
+      return { isConnected: false, status: { type: 'unknown', message: 'Unknown' } };
     }
   };
 };

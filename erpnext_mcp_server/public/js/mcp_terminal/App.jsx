@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { XTerm } from 'react-xtermjs';
 import { FitAddon } from '@xterm/addon-fit';
 import { AttachAddon } from '@xterm/addon-attach';
 
-function App() {
+// Use forwardRef to allow parent components to get a ref to this component
+const App = forwardRef((props, ref) => {
   const [isConnected, setIsConnected] = useState(false);
   const [status, setStatus] = useState({ type: 'disconnected', message: 'Disconnected' });
   const [terminalHeight, setTerminalHeight] = useState(400);
@@ -11,13 +12,38 @@ function App() {
   const [tokenStatus, setTokenStatus] = useState('');
   const [sessionId, setSessionId] = useState(null);
 
-  const fitAddonRef = useRef(new FitAddon());
+  // Create refs
   const terminalRef = useRef(null);
-  const websocketRef = useRef(null);
   const containerRef = useRef(null);
+  const websocketRef = useRef(null);
   
+  // Create fit addon
+  const fitAddonRef = useRef(new FitAddon());
+  
+  // Constants
   const MIN_TERMINAL_HEIGHT = 300;
-  const MAX_TERMINAL_HEIGHT = window.innerHeight - 200; // Account for headers and footers
+  const MAX_TERMINAL_HEIGHT = window.innerHeight - 200;
+
+  // Expose methods to parent components through ref
+  useImperativeHandle(ref, () => ({
+    connectToServer: async () => {
+      if (!isConnected) {
+        await connect();
+        return true;
+      }
+      return false;
+    },
+    disconnectFromServer: () => {
+      if (isConnected) {
+        disconnect();
+        return true;
+      }
+      return false;
+    },
+    getConnectionStatus: () => {
+      return { isConnected, status };
+    }
+  }));
 
   // Generate a unique session ID for tracking terminal usage
   const generateSessionId = useCallback(() => {
@@ -30,27 +56,10 @@ function App() {
     if (!sessionId) {
       setSessionId(generateSessionId());
     }
-  }, [generateSessionId, sessionId]);
-
-  // Log terminal events for auditing
-  const logTerminalEvent = useCallback((eventType, details = null, commandType = null) => {
-    if (!sessionId) return;
     
-    frappe.call({
-      method: 'erpnext_mcp_server.api.log_terminal_event',
-      args: {
-        event_type: eventType,
-        session_id: sessionId,
-        command_type: commandType,
-        details: details
-      },
-      callback: function(r) {
-        if (r.exc) {
-          console.error('Failed to log terminal event:', r.exc);
-        }
-      }
-    });
-  }, [sessionId]);
+    // Initialize addons
+    setAddons([fitAddonRef.current]);
+  }, [generateSessionId, sessionId]);
 
   // Update terminal dimensions when window is resized
   useEffect(() => {
@@ -74,6 +83,40 @@ function App() {
       }
     };
   }, []);
+
+  // Update the Connect MCP button state
+  const updateConnectButton = useCallback((connected) => {
+    const $button = $('.mcp-connect-btn');
+    if (connected) {
+      $button.removeClass('btn-primary').addClass('btn-success').html(`
+        <i class="fa fa-check mr-1"></i> ${__('Connected')}
+      `);
+    } else {
+      $button.removeClass('btn-success').addClass('btn-primary').html(`
+        <i class="fa fa-plug mr-1"></i> ${__('Connect MCP')}
+      `);
+    }
+  }, []);
+
+  // Log terminal events for auditing
+  const logTerminalEvent = useCallback((eventType, details = null, commandType = null) => {
+    if (!sessionId) return;
+    
+    frappe.call({
+      method: 'erpnext_mcp_server.api.terminal.log_terminal_event',
+      args: {
+        event_type: eventType,
+        session_id: sessionId,
+        command_type: commandType,
+        details: details
+      },
+      callback: function(r) {
+        if (r.exc) {
+          console.error('Failed to log terminal event:', r.exc);
+        }
+      }
+    });
+  }, [sessionId]);
 
   // Token management functions
   const encryptToken = (token) => {
@@ -132,7 +175,7 @@ function App() {
     try {
       return new Promise((resolve, reject) => {
         frappe.call({
-          method: 'erpnext_mcp_server.api.get_mcp_token',
+          method: 'erpnext_mcp_server.api.terminal.get_mcp_token',
           callback: function(r) {
             if (r.message && r.message.token) {
               const token = r.message.token;
@@ -214,7 +257,7 @@ function App() {
   const getMCPSettings = async () => {
     return new Promise((resolve, reject) => {
       frappe.call({
-        method: 'erpnext_mcp_server.api.get_mcp_settings',
+        method: 'erpnext_mcp_server.api.terminal.get_mcp_settings',
         callback: function(r) {
           if (r.message) {
             resolve(r.message);
@@ -238,6 +281,10 @@ function App() {
       // Log connection attempt
       logTerminalEvent('Connect', 'Terminal connection initiated');
       
+      // Update button state
+      updateConnectButton(false);
+      $('.mcp-connect-btn').html('<i class="fa fa-spinner fa-spin mr-1"></i> ' + __('Connecting...'));
+      
       // Get settings
       const settings = await getMCPSettings();
       
@@ -246,6 +293,7 @@ function App() {
           terminalRef.current.terminal.writeln('\r\n\x1b[31mError: WebSocket URL not configured in MCP Settings\x1b[0m');
         }
         setStatus({ type: 'error', message: 'Configuration error' });
+        updateConnectButton(false);
         return;
       }
       
@@ -256,6 +304,7 @@ function App() {
           terminalRef.current.terminal.writeln('\r\n\x1b[31mError: Failed to get authentication token\x1b[0m');
         }
         setStatus({ type: 'error', message: 'Authentication error' });
+        updateConnectButton(false);
         return;
       }
       const token = tokenResult.token;
@@ -286,6 +335,9 @@ function App() {
         setIsConnected(true);
         setStatus({ type: 'connected', message: 'Connected' });
         
+        // Update button
+        updateConnectButton(true);
+        
         // Clear terminal and focus
         if (terminalRef.current) {
           terminalRef.current.terminal.clear();
@@ -313,6 +365,7 @@ function App() {
         terminalRef.current.terminal.writeln(`\r\n\x1b[31mError: ${error.message || 'Connection failed'}\x1b[0m`);
       }
       setStatus({ type: 'error', message: 'Connection error' });
+      updateConnectButton(false);
       logTerminalEvent('Error', `Connection error: ${error.message || 'Unknown error'}`);
     }
   };
@@ -323,12 +376,15 @@ function App() {
       websocketRef.current.close();
     }
     
-    // Remove the addon from terminal
+    // Remove the attach addon from terminal
     setAddons([fitAddonRef.current]);
     
     // Update state
     setIsConnected(false);
     setStatus({ type: 'disconnected', message: 'Disconnected' });
+    
+    // Update button
+    updateConnectButton(false);
     
     // Log disconnection
     logTerminalEvent('Disconnect', 'Terminal disconnected');
@@ -342,6 +398,9 @@ function App() {
     setIsConnected(false);
     setStatus({ type: 'disconnected', message: 'Disconnected' });
     setAddons([fitAddonRef.current]);
+    
+    // Update button
+    updateConnectButton(false);
     
     if (terminalRef.current) {
       if (event.wasClean) {
@@ -474,13 +533,13 @@ function App() {
             <div className="terminal-placeholder-content">
               <i className="fa fa-terminal fa-2x mb-2"></i>
               <p>Terminal ready</p>
-              <p className="text-muted">Click "Connect" to start a session</p>
+              <p className="text-muted">Click "Connect" to start a session or use the "Connect MCP" button above</p>
             </div>
           </div>
         )}
       </div>
     </div>
   );
-}
+});
 
 export default App;
