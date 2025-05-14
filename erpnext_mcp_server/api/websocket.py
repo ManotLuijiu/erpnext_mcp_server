@@ -1,35 +1,26 @@
-# erpnext_mcp_server/websocket.py
-
 import json
 import os
 import select
-import time
 
 import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
-from erpnext_mcp_server.api.terminal import (
-    active_sessions,
-    log_terminal_command,
-    resize_terminal,
-)
+from erpnext_mcp_server.api.terminal import active_sessions, resize_terminal
 
 
 def handle_terminal_websocket(ws):
     """Handle WebSocket connections for terminal sessions"""
     try:
-        # First message should be authentication
-        message = ws.receive()
-        if not message:
-            ws.send(json.dumps({"error": "No authentication data received"}))
-            return
-
-        auth_data = json.loads(message)
-        session_id = auth_data.get("session_id")
+        # Get session ID from query parameters
+        query_params = frappe.request.environ.get("QUERY_STRING", "")
+        params = dict(
+            param.split("=") for param in query_params.split("&") if "=" in param
+        )
+        session_id = params.get("session_id")
 
         if not session_id:
-            ws.send(json.dumps({"error": "Session ID is required for authentication"}))
+            ws.send(json.dumps({"error": "Session ID is required"}))
             return
 
         # Check if session exists
@@ -50,22 +41,15 @@ def handle_terminal_websocket(ws):
             )
             return
 
-        # Authentication successful
-        ws.send(
-            json.dumps(
-                {"message": "Authentication successful", "session_id": session_id}
-            )
-        )
-
-        # Set up WebSocket communication
+        # Get the master file descriptor
         master_fd = session["master_fd"]
 
-        # Use select to monitor both WebSocket and terminal
+        # Set up a simple bidirectional proxy between WebSocket and pty
         while True:
-            # Update the last active timestamp
+            # Update last active timestamp
             session["last_active"] = now_datetime()
 
-            # Check if the process is still running
+            # Check if process is still running
             if session.get("process") and session["process"].poll() is not None:
                 # Process has terminated
                 ws.send(
@@ -75,59 +59,38 @@ def handle_terminal_websocket(ws):
                 )
                 break
 
-            # Wait for data from WebSocket or terminal
-            try:
-                ws_ready = ws.sock.poll(timeout=100)  # Poll with 100ms timeout
+            # Use select to monitor both the WebSocket and terminal
+            readable, _, _ = select.select([ws.sock, master_fd], [], [], 0.1)
 
-                if ws_ready:
-                    # Data from WebSocket
+            if ws.sock in readable:
+                # Data from WebSocket to terminal
+                try:
                     message = ws.receive()
                     if message is None:
                         # WebSocket closed
                         break
 
-                    data = json.loads(message)
+                    # Write data to terminal
+                    os.write(master_fd, message.encode())
+                except Exception as e:
+                    frappe.log_error(
+                        f"Error receiving from WebSocket: {str(e)}",
+                        "Terminal WebSocket Error",
+                    )
+                    break
 
-                    # Handle different message types
-                    if data.get("type") == "input":
-                        # Input to send to terminal
-                        input_data = data.get("data", "")
-                        os.write(master_fd, input_data.encode())
-
-                        # Log the command if it ends with a newline
-                        if input_data.endswith("\n") or input_data.endswith("\r"):
-                            log_terminal_command(session_id, input_data.strip())
-
-                    elif data.get("type") == "resize":
-                        # Resize the terminal
-                        rows = data.get("rows", 24)
-                        cols = data.get("cols", 80)
-                        # session_id = frappe.local.form_dict.get("session_id")
-
-                        resize_terminal(session_id, rows, cols)
-
-                    elif data.get("type") == "ping":
-                        # Respond to ping with pong
-                        ws.send(json.dumps({"type": "pong", "time": time.time()}))
-
-                # Check if there's data from the terminal
-                ready, _, _ = select.select([master_fd], [], [], 0)
-                if ready:
-                    output = os.read(master_fd, 65536).decode("utf-8", errors="replace")
-                    if output:
-                        ws.send(json.dumps({"type": "output", "data": output}))
-            except Exception as e:
-                frappe.log_error(
-                    f"Error in terminal WebSocket communication: {str(e)}",
-                    "Terminal WebSocket Error",
-                )
-                ws.send(json.dumps({"error": str(e), "close": True}))
-                break
+            if master_fd in readable:
+                # Data from terminal to WebSocket
+                try:
+                    data = os.read(master_fd, 65536)
+                    ws.send(data)
+                except Exception as e:
+                    frappe.log_error(
+                        f"Error reading from terminal: {str(e)}",
+                        "Terminal WebSocket Error",
+                    )
+                    break
     except Exception as e:
         frappe.log_error(
             f"Error in terminal WebSocket handler: {str(e)}", "Terminal WebSocket Error"
         )
-        try:
-            ws.send(json.dumps({"error": str(e), "close": True}))
-        except:
-            pass

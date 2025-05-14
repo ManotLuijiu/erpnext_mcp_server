@@ -8,6 +8,7 @@ import signal
 import string
 import struct
 import subprocess
+import sys
 import tempfile
 import termios
 import time
@@ -131,14 +132,15 @@ def create_terminal_session():
 
         # Start the MCP server process if it's not already running
         if not is_mcp_server_running():
-            # Path to the MCP server executable
-            mcp_server_path = os.path.join(
-                frappe.get_app_path("erpnext_mcp_server"), "bin", "mcp_server"
-            )
+            # Path to Python interpreter
+            python_executable = sys.executable
 
-            # Start the MCP server process
+            # Path to the MCP server module
+            mcp_server_module = "erpnext_mcp_server.mcp_ag2_example.server.server"
+
+            # Start the MCP server process using Python to run the module
             process = subprocess.Popen(
-                [mcp_server_path],
+                [python_executable, "-m", mcp_server_module],
                 stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,
@@ -157,7 +159,7 @@ def create_terminal_session():
             }
 
             # Log the session creation
-            log_terminal_session(session_id, "create")
+            log_terminal_session(session_id, "Connect")
 
             return {
                 "success": True,
@@ -346,14 +348,19 @@ def close_terminal_session():
         return {"success": False, "error": str(e)}
 
 
+@frappe.whitelist()
 def log_terminal_session(session_id, action):
     """Log terminal session events"""
     try:
+        # Make sure action is one of the valid options
+        valid_actions = ["Connect", "Disconnect", "Command", "Token Request", "Error"]
+        action = action if action in valid_actions else "Connect"
+
         log = frappe.new_doc("MCP Terminal Log")
         log.user = frappe.session.user  # type: ignore
         log.timestamp = now_datetime()  # type: ignore
         log.session_id = session_id  # type: ignore
-        log.action = action.capitalize()  # type: ignore
+        log.action = action  # type: ignore
         log.command_type = "Shell"  # type: ignore
         log.details = f"Terminal session {action}"  # type: ignore
         log.insert(ignore_permissions=True)

@@ -1,4 +1,4 @@
-import React, {useRef} from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 
@@ -14,7 +14,6 @@ erpnext_mcp_server.mcp_terminal.create = function(wrapper) {
   // Create a container for our React app
   const container = document.createElement('div');
   container.className = 'mcp-terminal-page-wrapper';
-  // wrapper.appendChild(container);
 
   // Append to the container element
   if (containerElement && containerElement.appendChild) {
@@ -25,25 +24,26 @@ erpnext_mcp_server.mcp_terminal.create = function(wrapper) {
     document.body.appendChild(container);
   }
   
-  // Render our React app
-  // const root = createRoot(container);
-  // let appRef = null;
-  // root.render(<App />);
-
-  // Create a ref to access the App's methods
-  const appRef = useRef();
-
-   // Render our React app
+  // Create the React app and keep a reference to it
   const root = createRoot(container);
-  root.render(<App ref={appRef} />);
+  // Create a ref that we'll attach to the App component
+  let appInstance = null;
+  
+  // Define a ref callback function to capture the App component instance
+  const setAppRef = (ref) => {
+    appInstance = ref;
+  };
+  
+  // Render our React app with the ref callback
+  root.render(<App ref={setAppRef} />);
   
   // Return methods that can be called from outside
   return {
     destroy: () => {
       try {
         // Disconnect if connected
-        if (appRef.current) {
-          appRef.current.disconnectFromServer();
+        if (appInstance) {
+          appInstance.disconnectFromServer();
         }
         
         // Unmount the component
@@ -58,20 +58,20 @@ erpnext_mcp_server.mcp_terminal.create = function(wrapper) {
       }
     },
     connect: () => {
-      if (appRef.current) {
-        return appRef.current.connectToServer();
+      if (appInstance) {
+        return appInstance.connectToServer();
       }
       return false;
     },
     disconnect: () => {
-      if (appRef.current) {
-        return appRef.current.disconnectFromServer();
+      if (appInstance) {
+        return appInstance.disconnectFromServer();
       }
       return false;
     },
     getStatus: () => {
-      if (appRef.current) {
-        return appRef.current.getConnectionStatus();
+      if (appInstance) {
+        return appInstance.getConnectionStatus();
       }
       return { isConnected: false, status: { type: 'unknown', message: 'Unknown' } };
     }
