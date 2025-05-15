@@ -12,7 +12,7 @@ import { FitAddon } from '@xterm/addon-fit';
 // import { AttachAddon } from '@xterm/addon-attach';
 import { io } from 'socket.io-client';
 import './styles/xterm.css';
-// import './styles/terminal.css';
+import './styles/terminal.css';
 
 function App() {
   const terminalRef = useRef(null);
@@ -366,7 +366,7 @@ function App() {
             <div className="w-3 h-3 rounded-full bg-red-500"></div>
             <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="ml-4 text-sm font-medium">Web Bash Terminal</span>
+            <span className="ml-4 text-sm font-medium">Web Terminal</span>
           </div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">

@@ -2,7 +2,7 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
   const page = frappe.ui.make_app_page({
     parent: wrapper,
     title: __('MCP Terminal'),
-    single_column: false,
+    single_column: true,
   });
 
   // Set indicator to show beta status
@@ -125,6 +125,11 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
     );
   });
 
+  // Create the terminal container in the page
+  $(
+    '<div id="mcp-terminal-react-root" class="mcp-terminal-container"></div>'
+  ).appendTo(page.main);
+
   // Add settings menu
   page.add_menu_item(__('Terminal Settings'), function () {
     // Show a dialog with terminal settings
@@ -199,6 +204,7 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
     frappe.mcp_terminal = erpnext_mcp_server.mcp_terminal.create(
       terminalContainer[0]
     );
+    console.log('MCP Terminal bundle loaded');
   });
 };
 

@@ -97,11 +97,11 @@
 }
 
 /* Terminal */
-.xterm {
+/* .xterm {
   height: 100%;
   width: 100%;
   padding: 4px;
-}
+} */
 
 /* Animation for connecting status */
 @keyframes blink {
