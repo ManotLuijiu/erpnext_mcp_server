@@ -12,190 +12,326 @@ import { FitAddon } from '@xterm/addon-fit';
 // import { AttachAddon } from '@xterm/addon-attach';
 import { io } from 'socket.io-client';
 import './styles/xterm.css';
-import './styles/terminal.css';
+// import './styles/terminal.css';
 
 function App() {
   const terminalRef = useRef(null);
   const socketRef = useRef(null);
   const termRef = useRef(null);
+  const fitAddonRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    let term = null;
-    let fitAddon = null;
+    // let term = null;
+    // let fitAddon = null;
 
-    const initializeTerminal = () => {
-      term = new Terminal({
-        cursorBlink: false,
-        fontSize: 14,
-        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-        theme: {
-          background: '#1a1b26',
-          foreground: '#a9b1d6',
-          cursor: '#c0caf5',
-          selection: '#28344a',
-          black: '#414868',
-          red: '#f7768e',
-          green: '#9ece6a',
-          yellow: '#e0af68',
-          blue: '#7aa2f7',
-          magenta: '#bb9af7',
-          cyan: '#7dcfff',
-          white: '#c0caf5',
-          brightBlack: '#414868',
-          brightRed: '#f7768e',
-          brightGreen: '#9ece6a',
-          brightYellow: '#e0af68',
-          brightBlue: '#7aa2f7',
-          brightMagenta: '#bb9af7',
-          brightCyan: '#7dcfff',
-          brightWhite: '#c0caf5',
-        },
-        rows: 24,
-        cols: 80,
-        convertEol: true,
-        scrollback: 1000,
-        rendererType: 'canvas',
-        allowTransparency: true,
-      });
+    // const initializeTerminal = () => {
+    //   term = new Terminal({
+    //     cursorBlink: true,
+    //     fontSize: 14,
+    //     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    //     theme: {
+    //       background: '#1a1b26',
+    //       foreground: '#a9b1d6',
+    //       cursor: '#c0caf5',
+    //       selection: '#28344a',
+    //       black: '#414868',
+    //       red: '#f7768e',
+    //       green: '#9ece6a',
+    //       yellow: '#e0af68',
+    //       blue: '#7aa2f7',
+    //       magenta: '#bb9af7',
+    //       cyan: '#7dcfff',
+    //       white: '#c0caf5',
+    //       brightBlack: '#414868',
+    //       brightRed: '#f7768e',
+    //       brightGreen: '#9ece6a',
+    //       brightYellow: '#e0af68',
+    //       brightBlue: '#7aa2f7',
+    //       brightMagenta: '#bb9af7',
+    //       brightCyan: '#7dcfff',
+    //       brightWhite: '#c0caf5',
+    //     },
+    //     rows: 24,
+    //     cols: 80,
+    //     convertEol: true,
+    //     scrollback: 1000,
+    //     rendererType: 'canvas',
+    //     allowTransparency: true,
+    //   });
 
-      fitAddon = new FitAddon();
-      term.loadAddon(fitAddon);
-      termRef.current = term;
+    //   fitAddon = new FitAddon();
+    //   term.loadAddon(fitAddon);
+    //   termRef.current = term;
 
-      if (terminalRef.current) {
-        term.open(terminalRef.current);
-        fitAddon.fit();
-      }
-    };
+    //   if (terminalRef.current) {
+    //     term.open(terminalRef.current);
+    //     fitAddon.fit();
+    //   }
+    // };
 
-    const socketUrl = window.location.origin;
-    const testUrl = 'http://localhost:9000';
+    const term = new Terminal({
+      cursorBlink: true, // Enable cursor blinking
+      fontSize: 14,
+      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      theme: {
+        background: '#1a1b26',
+        foreground: '#a9b1d6',
+        cursor: '#c0caf5',
+        cursorAccent: '#1a1b26', // Add cursor accent color
+        selection: '#28344a',
+        black: '#414868',
+        red: '#f7768e',
+        green: '#9ece6a',
+        yellow: '#e0af68',
+        blue: '#7aa2f7',
+        magenta: '#bb9af7',
+        cyan: '#7dcfff',
+        white: '#c0caf5',
+        brightBlack: '#414868',
+        brightRed: '#f7768e',
+        brightGreen: '#9ece6a',
+        brightYellow: '#e0af68',
+        brightBlue: '#7aa2f7',
+        brightMagenta: '#bb9af7',
+        brightCyan: '#7dcfff',
+        brightWhite: '#c0caf5',
+      },
+      rows: 24,
+      cols: 80,
+      convertEol: true,
+      scrollback: 1000,
+      rendererType: 'canvas',
+      allowTransparency: true,
+    });
 
+    // Create and load the FitAddon
+    const fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
+
+    // Store references
+    termRef.current = term;
+    fitAddonRef.current = fitAddon;
+
+    // Open terminal if the DOM element is available
+    if (terminalRef.current) {
+      term.open(terminalRef.current);
+      fitAddon.fit();
+
+      // Important: Focus the terminal to make cursor work
+      term.focus();
+    }
+
+    // Create Socket.IO connection - Use Frappe-compatible endpoint
+    // Use site URL for production or localhost for development
+    // const socketUrl1 = window.location.origin;
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+
+    const { sitename, socketio_port } = frappe.boot;
+    // const testUrl = 'http://localhost:9000';
+    console.log('ENV', process.env.NODE_ENV);
+
+    const dev = process.env.NODE_ENV === 'development';
+
+    const socketUrl =
+      frappe && !dev
+        ? `${window.location.protocol}//${sitename}`
+        : 'http://localhost:9000';
+
+    console.log('protocol', protocol);
+    console.log('host', host);
+    console.log('sitename', sitename);
+    console.log('socketio_port', socketio_port);
     console.log('socketUrl', socketUrl);
 
-    const initializeSocket = () => {
-      socketRef.current = io(testUrl, {
-        transports: ['polling', 'websocket'],
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
-        autoConnect: true,
-        forceNew: true,
-        path: '/socket.io/',
-        upgrade: true,
-        rememberUpgrade: true,
-        rejectUnauthorized: false,
+    // const initializeSocket = () => {
+    //   socketRef.current = io(testUrl, {
+    //     transports: ['polling', 'websocket'],
+    //     reconnection: true,
+    //     reconnectionAttempts: Infinity,
+    //     reconnectionDelay: 1000,
+    //     reconnectionDelayMax: 5000,
+    //     timeout: 20000,
+    //     autoConnect: true,
+    //     forceNew: true,
+    //     path: '/socket.io/',
+    //     upgrade: true,
+    //     rememberUpgrade: true,
+    //     rejectUnauthorized: false,
+    //   });
+
+    //   console.log('socketRef.current', socketRef.current);
+
+    //   socketRef.current.on('connect_error', (error) => {
+    //     console.error('Connection error: ', error);
+    //     setIsConnected(false);
+    //     if (term) {
+    //       term.write(
+    //         '\r\n\x1b[31mConnection error. Attempting to reconnect...\x1b[0m\r\n'
+    //       );
+    //     }
+    //   });
+
+    //   socketRef.current.on('connect', () => {
+    //     console.log('Connected to server');
+    //     setIsConnected(true);
+    //     console.log('term onConnected', term);
+    //     if (term) {
+    //       term.write('\r\n\x1b[32mConnected to server.\x1b[0m\r\n');
+    //       fitAddon.fit();
+    //       const { rows, cols } = term;
+
+    //       console.log('rows', rows);
+    //       console.log('cols', cols);
+
+    //       socketRef.current.emit('resize', { rows, cols });
+    //     }
+    //   });
+
+    //   socketRef.current.on('disconnect', (reason) => {
+    //     console.log('Disconnected from server: ', reason);
+    //     setIsConnected(false);
+    //     if (term) {
+    //       term.write(
+    //         '\r\n\x1b[33mDisconnected from server. Reason: ' +
+    //           reason +
+    //           '\x1b[0m\r\n'
+    //       );
+    //     }
+    //   });
+
+    //   socketRef.current.on('reconnect_attempt', (attemptNumber) => {
+    //     console.log('Reconnection attempt:', attemptNumber);
+    //     if (term) {
+    //       term.write(
+    //         '\r\n\x1b[33mAttempting to reconnect... (Attempt ' +
+    //           attemptNumber +
+    //           ')\x1b[0m\r\n'
+    //       );
+    //     }
+    //   });
+
+    //   socketRef.current.on('reconnect', (attemptNumber) => {
+    //     console.log('Reconnected after', attemptNumber, 'attempts');
+    //     if (term) {
+    //       term.write('\r\n\x1b[32mReconnected to server.\x1b[0m\r\n');
+    //     }
+    //   });
+
+    //   socketRef.current.on('reconnect_error', (error) => {
+    //     console.error('Reconnection error:', error);
+    //     if (term) {
+    //       term.write(
+    //         '\r\n\x1b[31mReconnection error: ' + error.message + '\x1b[0m\r\n'
+    //       );
+    //     }
+    //   });
+
+    //   socketRef.current.on('reconnect_failed', () => {
+    //     console.error('Failed to reconnect');
+    //     if (term) {
+    //       term.write('\r\n\x1b[31mFailed to reconnect to server.\x1b[0m\r\n');
+    //     }
+    //   });
+
+    //   socketRef.current.on('upgrade', (transport) => {
+    //     console.log('Transport upgraded to:', transport.name);
+    //     if (term) {
+    //       term.write(
+    //         '\r\n\x1b[36mTransport upgraded to: ' +
+    //           transport.name +
+    //           '\x1b[0m\r\n'
+    //       );
+    //     }
+    //   });
+
+    //   socketRef.current.on('upgradeError', (error) => {
+    //     console.error('Transport upgrade error:', error);
+    //     if (term) {
+    //       term.write(
+    //         '\r\n\x1b[31mTransport upgrade failed: ' +
+    //           error.message +
+    //           '\x1b[0m\r\n'
+    //       );
+    //     }
+    //   });
+
+    //   socketRef.current.on('output', (data) => {
+    //     if (term) {
+    //       term.write(data);
+    //     }
+    //   });
+
+    //   if (term) {
+    //     term.onData((data) => {
+    //       if (socketRef.current?.connected) {
+    //         socketRef.current.emit('input', data);
+    //       }
+    //     });
+    //   }
+    // };
+
+    // Configure Socket.IO connection with Frappe paths
+    socketRef.current = io(socketUrl, {
+      path: frappe ? '/socket.io/' : '/socket.io',
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      autoConnect: true,
+    });
+
+    // Socket.IO connection handlers
+    socketRef.current.on('connect', () => {
+      console.log('Connected to Socket.IO server');
+      setIsConnected(true);
+
+      // Notify server about terminal size
+      const { rows, cols } = term;
+      socketRef.current.emit('terminal:resize', { rows, cols });
+
+      // Send session information to identity this terminal
+      socketRef.current.emit('terminal:connect', {
+        session_id: frappe.session.user_id || 'anonymous',
       });
 
-      socketRef.current.on('connect_error', (error) => {
-        console.error('Connection error: ', error);
-        setIsConnected(false);
-        if (term) {
-          term.write(
-            '\r\n\x1b[31mConnection error. Attempting to reconnect...\x1b[0m\r\n'
-          );
-        }
-      });
+      // Write connection message to terminal
+      term.write('\r\n\x1b[32mConnected to MCP Server\x1b[0m\r\n');
 
-      socketRef.current.on('connect', () => {
-        console.log('Connected to server');
-        setIsConnected(true);
-        console.log('term onConnected', term);
-        if (term) {
-          term.write('\r\n\x1b[32mConnected to server.\x1b[0m\r\n');
-          fitAddon.fit();
-          const { rows, cols } = term;
-          socketRef.current.emit('resize', { rows, cols });
-        }
-      });
+      // Focus the terminal after connection
+      term.focus();
+    });
 
-      socketRef.current.on('disconnect', (reason) => {
-        console.log('Disconnected from server: ', reason);
-        setIsConnected(false);
-        if (term) {
-          term.write(
-            '\r\n\x1b[33mDisconnected from server. Reason: ' +
-              reason +
-              '\x1b[0m\r\n'
-          );
-        }
-      });
+    socketRef.current.on('disconnect', (reason) => {
+      console.log('Disconnected from server:', reason);
+      setIsConnected(false);
+      term.write(
+        '\r\n\x1b[33mDisconnected from server: ' + reason + '\x1b[0m\r\n'
+      );
+    });
 
-      socketRef.current.on('reconnect_attempt', (attemptNumber) => {
-        console.log('Reconnection attempt:', attemptNumber);
-        if (term) {
-          term.write(
-            '\r\n\x1b[33mAttempting to reconnect... (Attempt ' +
-              attemptNumber +
-              ')\x1b[0m\r\n'
-          );
-        }
-      });
+    socketRef.current.on('terminal:output', (data) => {
+      // Handle output data from server
+      console.log('Received data:', data);
+      if (typeof data === 'string') {
+        term.write(data);
+      } else if (data && data.data) {
+        term.write(data.data);
+      }
+    });
 
-      socketRef.current.on('reconnect', (attemptNumber) => {
-        console.log('Reconnected after', attemptNumber, 'attempts');
-        if (term) {
-          term.write('\r\n\x1b[32mReconnected to server.\x1b[0m\r\n');
-        }
-      });
-
-      socketRef.current.on('reconnect_error', (error) => {
-        console.error('Reconnection error:', error);
-        if (term) {
-          term.write(
-            '\r\n\x1b[31mReconnection error: ' + error.message + '\x1b[0m\r\n'
-          );
-        }
-      });
-
-      socketRef.current.on('reconnect_failed', () => {
-        console.error('Failed to reconnect');
-        if (term) {
-          term.write('\r\n\x1b[31mFailed to reconnect to server.\x1b[0m\r\n');
-        }
-      });
-
-      socketRef.current.on('upgrade', (transport) => {
-        console.log('Transport upgraded to:', transport.name);
-        if (term) {
-          term.write(
-            '\r\n\x1b[36mTransport upgraded to: ' +
-              transport.name +
-              '\x1b[0m\r\n'
-          );
-        }
-      });
-
-      socketRef.current.on('upgradeError', (error) => {
-        console.error('Transport upgrade error:', error);
-        if (term) {
-          term.write(
-            '\r\n\x1b[31mTransport upgrade failed: ' +
-              error.message +
-              '\x1b[0m\r\n'
-          );
-        }
-      });
-
-      socketRef.current.on('output', (data) => {
-        if (term) {
-          term.write(data);
-        }
-      });
-
-      if (term) {
-        term.onData((data) => {
-          if (socketRef.current?.connected) {
-            socketRef.current.emit('input', data);
-          }
+    // Set up terminal input handler
+    term.onData((data) => {
+      if (socketRef.current && socketRef.current.connected) {
+        console.log('Sending data:', data);
+        socketRef.current.emit('terminal:input', {
+          data: data,
         });
       }
-    };
-    initializeTerminal();
-    initializeSocket();
+    });
 
     const handleResize = () => {
       if (fitAddon && term) {
