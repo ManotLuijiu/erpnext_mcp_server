@@ -4,11 +4,12 @@
 Wrapper script to run the MCP server with proper Frappe context
 """
 
+import json
 import os
 import sys
-import json
+
 import frappe
-from frappe.utils import get_site_path
+from frappe.utils import get_site_path, now
 
 
 def run_mcp_server():
@@ -26,8 +27,8 @@ def run_mcp_server():
 
         # Get site settings
         settings = frappe.get_single("MCP Server Settings")
-        transport = settings.transport or "stdio"
-        port = settings.server_port or 3000
+        transport = settings.transport or "stdio"  # type: ignore
+        port = settings.server_port or 3000  # type: ignore
 
         # Set up environment
         site_path = get_site_path()
@@ -91,13 +92,13 @@ def get_server_info():
     # TODO: Dynamically discover available tools and resources
 
     return {
-        "enabled": settings.enabled,
-        "transport": settings.transport,
-        "port": settings.server_port,
-        "process_id": settings.process_id,
-        "last_start_time": settings.last_start_time,
-        "last_stop_time": settings.last_stop_time,
-        "last_error": settings.last_error,
+        "enabled": settings.enabled,  # type: ignore
+        "transport": settings.transport,  # type: ignore
+        "port": settings.server_port,  # type: ignore
+        "process_id": settings.process_id,  # type: ignore
+        "last_start_time": settings.last_start_time,  # type: ignore
+        "last_stop_time": settings.last_stop_time,  # type: ignore
+        "last_error": settings.last_error,  # type: ignore
         "tools": tools,
         "resources": resources,
     }
@@ -112,9 +113,9 @@ def start_server():
 
         # Update settings
         settings = frappe.get_single("MCP Server Settings")
-        settings.process_id = process.pid
-        settings.last_start_time = frappe.utils.now()
-        settings.last_error = None
+        settings.process_id = process.pid  # type: ignore
+        settings.last_start_time = now()  # type: ignore
+        settings.last_error = None  # type: ignore
         settings.save()
 
         return {
@@ -126,7 +127,7 @@ def start_server():
     except Exception as e:
         # Save error to settings
         settings = frappe.get_single("MCP Server Settings")
-        settings.last_error = str(e)
+        settings.last_error = str(e)  # type: ignore
         settings.save()
 
         return {"status": "error", "message": str(e)}

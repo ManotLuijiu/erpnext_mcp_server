@@ -6,8 +6,8 @@ Usage:
 """
 
 import os
-import click
 
+import click
 import frappe
 from frappe.commands.utils import pass_context
 

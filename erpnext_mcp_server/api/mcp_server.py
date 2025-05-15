@@ -1,5 +1,6 @@
 import os
 import sys
+
 import frappe
 from frappe import _
 from frappe.utils import get_site_path
@@ -10,7 +11,7 @@ def get_mcp_server_status():
     """Get the current status of the MCP server"""
     try:
         settings = frappe.get_single("MCP Server Settings")
-        status = settings.get_server_status()
+        status = settings.get_server_status()  # type: ignore
         return status
     except Exception as e:
         frappe.log_error(f"Error getting MCP server status: {str(e)}")
@@ -24,7 +25,7 @@ def start_mcp_server():
         settings = frappe.get_single("MCP Server Settings")
 
         # Check if server is already running
-        if settings.is_server_running():
+        if settings.is_server_running():  # type: ignore
             return {
                 "status": "info",
                 "message": "MCP Server is already running",
@@ -32,7 +33,7 @@ def start_mcp_server():
             }
 
         # Start the server
-        settings.start_server()
+        settings.start_server()  # type: ignore
 
         return {
             "status": "success",
@@ -52,7 +53,7 @@ def stop_mcp_server():
         settings = frappe.get_single("MCP Server Settings")
 
         # Check if server is running
-        if not settings.is_server_running():
+        if not settings.is_server_running():  # type: ignore
             return {
                 "status": "info",
                 "message": "MCP Server is not running",
@@ -60,7 +61,7 @@ def stop_mcp_server():
             }
 
         # Stop the server
-        settings.stop_server()
+        settings.stop_server()  # type: ignore
 
         return {
             "status": "success",
@@ -78,7 +79,7 @@ def restart_mcp_server():
     """Restart the MCP server"""
     try:
         settings = frappe.get_single("MCP Server Settings")
-        settings.restart_server()
+        settings.restart_server()  # type: ignore
 
         return {
             "status": "success",
@@ -96,7 +97,7 @@ def get_mcp_server_logs():
     """Get MCP server logs"""
     try:
         settings = frappe.get_single("MCP Server Settings")
-        logs = settings.get_server_logs()
+        logs = settings.get_server_logs()  # type: ignore
 
         # If no logs, provide some diagnostic information
         if (
@@ -105,18 +106,18 @@ def get_mcp_server_logs():
         ):
             diagnostic_info = []
             diagnostic_info.append("=== MCP Server Diagnostic Information ===")
-            diagnostic_info.append(f"Server Path: {settings.server_path}")
-            diagnostic_info.append(f"Transport: {settings.transport}")
-            diagnostic_info.append(f"Status: {settings.status}")
-            diagnostic_info.append(f"Process ID: {settings.process_id}")
-            diagnostic_info.append(f"Last Start: {settings.last_start_time}")
-            diagnostic_info.append(f"Last Stop: {settings.last_stop_time}")
+            diagnostic_info.append(f"Server Path: {settings.server_path}")  # type: ignore
+            diagnostic_info.append(f"Transport: {settings.transport}")  # type: ignore
+            diagnostic_info.append(f"Status: {settings.status}")  # type: ignore
+            diagnostic_info.append(f"Process ID: {settings.process_id}")  # type: ignore
+            diagnostic_info.append(f"Last Start: {settings.last_start_time}")  # type: ignore
+            diagnostic_info.append(f"Last Stop: {settings.last_stop_time}")  # type: ignore
             diagnostic_info.append(f"Site: {frappe.local.site}")
             diagnostic_info.append(f"Python Executable: {sys.executable}")
             diagnostic_info.append(f"Sites Path: {get_site_path()}")
 
-            if settings.last_error:
-                diagnostic_info.append(f"\nLast Error: {settings.last_error}")
+            if settings.last_error:  # type: ignore
+                diagnostic_info.append(f"\nLast Error: {settings.last_error}")  # type: ignore
 
             logs = "\n".join(diagnostic_info)
 
@@ -134,16 +135,16 @@ def get_mcp_server_config():
         settings = frappe.get_single("MCP Server Settings")
 
         config = {
-            "server_path": settings.server_path,
-            "transport": settings.transport,
-            "log_level": settings.log_level,
-            "auto_start": settings.auto_start,
-            "status": settings.status,
-            "is_running": settings.is_server_running(),
-            "process_id": settings.process_id,
-            "last_start_time": settings.last_start_time,
-            "last_stop_time": settings.last_stop_time,
-            "last_error": settings.last_error,
+            "server_path": settings.server_path,  # type: ignore
+            "transport": settings.transport,  # type: ignore
+            "log_level": settings.log_level,  # type: ignore
+            "auto_start": settings.auto_start,  # type: ignore
+            "status": settings.status,  # type: ignore
+            "is_running": settings.is_server_running(),  # type: ignore
+            "process_id": settings.process_id,  # type: ignore
+            "last_start_time": settings.last_start_time,  # type: ignore
+            "last_stop_time": settings.last_stop_time,  # type: ignore
+            "last_error": settings.last_error,  # type: ignore
         }
 
         return config
@@ -161,13 +162,13 @@ def update_mcp_server_config(config):
 
         # Update allowed fields
         if "server_path" in config:
-            settings.server_path = config["server_path"]
+            settings.server_path = config["server_path"]  # type: ignore
         if "transport" in config:
-            settings.transport = config["transport"]
+            settings.transport = config["transport"]  # type: ignore
         if "log_level" in config:
-            settings.log_level = config["log_level"]
+            settings.log_level = config["log_level"]  # type: ignore
         if "auto_start" in config:
-            settings.auto_start = config["auto_start"]
+            settings.auto_start = config["auto_start"]  # type: ignore
 
         settings.save()
 
@@ -184,7 +185,7 @@ def test_mcp_server_connection():
     try:
         settings = frappe.get_single("MCP Server Settings")
 
-        if not settings.is_server_running():
+        if not settings.is_server_running():  # type: ignore
             return {"status": "error", "message": "MCP Server is not running"}
 
         # TODO: Add actual connection test once we have a way to communicate with the server
@@ -193,7 +194,7 @@ def test_mcp_server_connection():
         return {
             "status": "success",
             "message": "MCP Server is running",
-            "process_id": settings.process_id,
+            "process_id": settings.process_id,  # type: ignore
         }
 
     except Exception as e:
@@ -211,7 +212,7 @@ def get_environment_info():
             "python_version": sys.version,
             "python_executable": sys.executable,
             "frappe_site": frappe.local.site,
-            "sites_path": get_sites_path(),
+            "sites_path": frappe.get_site_path(),
             "platform": platform.platform(),
             "python_path": sys.path[:5],  # First 5 entries
             "environment_variables": {
@@ -233,12 +234,12 @@ def get_environment_info():
 
         # Check if server file exists
         settings = frappe.get_single("MCP Server Settings")
-        if settings.server_path and os.path.exists(settings.server_path):
+        if settings.server_path and os.path.exists(settings.server_path):  # type: ignore
             info["server_file_exists"] = True
-            info["server_file_path"] = settings.server_path
+            info["server_file_path"] = settings.server_path  # type: ignore
         else:
             info["server_file_exists"] = False
-            info["server_file_path"] = settings.server_path
+            info["server_file_path"] = settings.server_path  # type: ignore
 
         return info
 

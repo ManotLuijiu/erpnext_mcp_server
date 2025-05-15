@@ -1,7 +1,6 @@
-# erpnext_mcp_server/test_client_stdio.py (fixed version)
 import asyncio
-import subprocess
 import json
+import subprocess
 import sys
 import time
 
@@ -17,8 +16,8 @@ async def test_mcp_stdio():
         "erpnext_mcp_server.mcp.local_server",
         "--site",
         "moo.localhost",
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
+        stdin=asyncio.subprocess.PIPE,  # Ensure stdin is set to PIPE (already correct)
+        stdout=asyncio.subprocess.PIPE,  # Ensure stdout is set to PIPE
         stderr=asyncio.subprocess.PIPE,
     )
 
@@ -28,7 +27,10 @@ async def test_mcp_stdio():
     # Check if the process is still running
     if process.returncode is not None:
         print(f"Server process exited with code: {process.returncode}")
-        stderr = await process.stderr.read()
+        if process.stderr is not None:
+            stderr = await process.stderr.read() if process.stderr is not None else b""
+        else:
+            stderr = b""
         print(f"Error output: {stderr.decode()}")
         return
 
@@ -47,18 +49,28 @@ async def test_mcp_stdio():
         }
 
         print(f"Sending: {json.dumps(init_request)}")
-        process.stdin.write((json.dumps(init_request) + "\n").encode())
-        await process.stdin.drain()
+        if process.stdin is not None:
+            process.stdin.write((json.dumps(init_request) + "\n").encode())
+            await process.stdin.drain()
+        else:
+            print("Error: process.stdin is None")
+            return
 
         # Try to read response with timeout
         try:
-            response = await asyncio.wait_for(process.stdout.readline(), timeout=5)
+            if process.stdout is not None:
+                response = await asyncio.wait_for(process.stdout.readline(), timeout=5)
+            else:
+                print("Error: process.stdout is None")
+                return
             if response:
                 print(f"Init response: {response.decode().strip()}")
             else:
                 print("No response received")
                 # Check for errors
-                stderr = await process.stderr.read()
+                stderr = (
+                    await process.stderr.read() if process.stderr is not None else b""
+                )
                 if stderr:
                     print(f"Server error: {stderr.decode()}")
                 return
@@ -123,7 +135,7 @@ async def test_mcp_stdio():
     except Exception as e:
         print(f"Error during test: {e}")
         # Try to get more error info
-        stderr = await process.stderr.read()
+        stderr = await process.stderr.read() if process.stderr is not None else b""
         if stderr:
             print(f"Server stderr: {stderr.decode()}")
 

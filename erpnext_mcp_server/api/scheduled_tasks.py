@@ -1,9 +1,10 @@
-import frappe
-import requests
-from bs4 import BeautifulSoup
 import json
 import logging
 from datetime import datetime
+
+import frappe
+import requests
+from bs4 import BeautifulSoup
 
 
 def update_tax_laws():

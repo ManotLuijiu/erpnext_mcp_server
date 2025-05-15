@@ -1,8 +1,8 @@
-# erpnext_mcp_server/debug_server.py (improved version)
-import frappe
-import sys
 import os
+import sys
 from pathlib import Path
+
+import frappe
 
 
 def debug_site(site_name):

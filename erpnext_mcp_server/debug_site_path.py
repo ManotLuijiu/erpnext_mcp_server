@@ -1,7 +1,7 @@
-# erpnext_mcp_server/debug_site_path.py
-import frappe
-import sys
 import os
+import sys
+
+import frappe
 from frappe.utils.response import get_json
 
 

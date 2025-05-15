@@ -1,6 +1,7 @@
 import asyncio
-import httpx
 import json
+
+import httpx
 
 
 async def test_mcp_client():

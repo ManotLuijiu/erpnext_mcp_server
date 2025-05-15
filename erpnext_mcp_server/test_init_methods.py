@@ -1,7 +1,7 @@
-# erpnext_mcp_server/test_init_methods.py
-import frappe
-import sys
 import os
+import sys
+
+import frappe
 
 
 def test_different_init_methods(site_name):
