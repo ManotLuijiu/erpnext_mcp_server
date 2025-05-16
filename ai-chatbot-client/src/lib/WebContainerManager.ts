@@ -8,8 +8,8 @@
 import { WebContainer } from '@webcontainer/api';
 import { WORK_DIR_NAME } from './prompt';
 import { PersistentShell, createPersistentShell } from './shell';
-import terminalStore, { terminalActions } from '@/stores/terminal';
-import { TerminalRef } from '@/components/Terminal';
+// import terminalStore, { terminalActions } from '@/stores/terminal';
+import { type TerminalRef } from '@/components/Terminal';
 
 class WebContainerManager {
   private static instance: WebContainerManager | null = null;
@@ -233,27 +233,29 @@ class WebContainerManager {
 
     this.isBooting = true;
 
-    this.bootPromise = new Promise<WebContainer>(async (resolve, reject) => {
-      try {
-        const container = await WebContainer.boot({
-          coep: 'credentialless',
-          workdirName: WORK_DIR_NAME,
-          forwardPreviewErrors: true,
-        });
-        this.webContainer = container;
+    this.bootPromise = new Promise<WebContainer>((resolve, reject) => {
+      (async () => {
+        try {
+          const container = await WebContainer.boot({
+            coep: 'credentialless',
+            workdirName: WORK_DIR_NAME,
+            forwardPreviewErrors: true,
+          });
+          this.webContainer = container;
 
-        // Initialize shell *after* container is booted
-        // The terminal will be provided later when Terminal component calls initializeShell
-        await this.initializeShell();
+          // Initialize shell *after* container is booted
+          // The terminal will be provided later when Terminal component calls initializeShell
+          await this.initializeShell();
 
-        this.isBooting = false;
-        resolve(container);
-      } catch (error: any) {
-        this.isBooting = false;
-        this.bootPromise = null;
-        console.error('WebContainerManager: Boot failed', error);
-        reject(error);
-      }
+          this.isBooting = false;
+          resolve(container);
+        } catch (error: any) {
+          this.isBooting = false;
+          this.bootPromise = null;
+          console.error('WebContainerManager: Boot failed', error);
+          reject(error);
+        }
+      })();
     });
 
     return this.bootPromise;

@@ -2,17 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/tbs_logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/assets/erpnext_mcp_server/ai-chatbot-client/tbs_logo.png" />
     <!-- <link rel="stylesheet" href="node_modules/@xterm/xterm/css/xterm.css" /> -->
     <!-- <script src="node_modules/@xterm/xterm/lib/xterm.js"></script> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ai-chatbot</title>
+    <script type="module" crossorigin src="/assets/erpnext_mcp_server/ai-chatbot-client/assets/index-BG9-4S7_.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/erpnext_mcp_server/ai-chatbot-client/assets/index-BtFObgjM.css">
   </head>
   <body>
     <div id="root"></div>
     <script>
       window.csrf_token = '{{ frappe.session.csrf_token }}';
     </script>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

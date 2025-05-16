@@ -4,6 +4,7 @@
 *.swp
 tags
 node_modules
+
 __pycache__
 *.py[oc]
 build/
@@ -16,3 +17,4 @@ wheels/
 .venv
 
 .cache
+erpnext_mcp_server/public/ai-chatbot-client/assets/*

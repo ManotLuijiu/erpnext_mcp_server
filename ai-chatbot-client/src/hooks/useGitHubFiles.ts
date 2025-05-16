@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { WebContainer } from '@webcontainer/api';
-import { FileEntry } from '@/types';
+import { type FileEntry } from '@/types';
 import { GITHUB_REPO_URL } from '@/lib/constants';
 import {
   extractRepoName,
@@ -12,11 +12,11 @@ import {
 } from '@/lib/utils';
 
 // Type for GitHub file structure
-interface GitHubFile {
-  name: string;
-  path: string;
-  content: string;
-}
+// interface GitHubFile {
+//   name: string;
+//   path: string;
+//   content: string;
+// }
 
 // Rate limit type for GitHub API
 interface RateLimit {

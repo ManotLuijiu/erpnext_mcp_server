@@ -3,13 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FileTree } from '@/components/FileTree';
 import { CodeEditor } from '@/components/Editor';
-import { FileEntry } from '@/types';
+import { type FileEntry } from '@/types';
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable';
-import { cn } from '@/lib/utils';
+// import { cn } from '@/lib/utils';
 import { Skeleton } from './ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from './ui/icons';
@@ -62,6 +62,7 @@ export function EditorPanel({
 
   // Calculate loading progress for demo purposes - in a real app, this would come from actual file loading progress
   const [loadingProgress, setLoadingProgress] = useState(0);
+  console.log('loadingProgress', loadingProgress);
 
   // Simulate loading progress when loading files
   useEffect(() => {

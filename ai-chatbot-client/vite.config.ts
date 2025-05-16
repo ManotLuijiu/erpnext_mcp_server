@@ -14,8 +14,11 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(__dirname, './src'),
     },
+  },
+  optimizeDeps: {
+    exclude: ['@webcontainer/api'],
   },
   build: {
     outDir: '../erpnext_mcp_server/public/ai-chatbot-client',

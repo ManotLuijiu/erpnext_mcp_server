@@ -4,8 +4,8 @@ import { twMerge } from 'tailwind-merge';
 import { decode as base64Decode } from 'js-base64';
 import { GITHUB_API_BASE_URL } from './constants';
 import he from 'he';
-import { FileEntry } from '../types';
-import { ITheme } from '@xterm/xterm';
+import { type FileEntry } from '@/types';
+import { type ITheme } from '@xterm/xterm';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -94,6 +94,8 @@ export const getGitHubRepoContent = async (
           ? new Date(parseInt(reset) * 1000).toLocaleTimeString()
           : 'unknown';
         // console.log(`GitHub API Rate Limit: ${remaining}/${limit} remaining. Resets at ${resetTime}`);
+
+        console.log('resetTime', resetTime);
 
         // Warn if getting low on requests
         if (parseInt(remaining) < 10) {
@@ -244,6 +246,8 @@ const generateTextTree = (tree: FileSystemTree, prefix = ''): string => {
   return treeString;
 };
 
+console.log('generateTextTree', generateTextTree);
+
 // Define the structure for the output
 export interface AIContextData {
   treeString: string;
@@ -371,15 +375,16 @@ export function extractFilesFromContent(content: string): GeneratedFile[] {
   const artifactRegex = /<boltArtifact[^>]*>([\s\S]*?)<\/boltArtifact>/g;
   let artifactMatch;
 
-  while ((artifactMatch = artifactRegex.exec(content)) !== null) {
+  artifactMatch = artifactRegex.exec(content);
+  while (artifactMatch !== null) {
     const artifactContent = artifactMatch[1];
 
     // Then extract file actions from each artifact
     const fileRegex =
       /<boltAction\s+type="file"\s+filePath="([^"]+)">([\s\S]*?)(?=<\/boltAction>)/g;
-    let fileMatch;
+    let fileMatch = fileRegex.exec(artifactContent);
 
-    while ((fileMatch = fileRegex.exec(artifactContent)) !== null) {
+    while (fileMatch !== null) {
       const [_, path, fileContent] = fileMatch;
       if (path && fileContent) {
         files.push({
@@ -387,6 +392,7 @@ export function extractFilesFromContent(content: string): GeneratedFile[] {
           content: he.decode(fileContent.trim()),
         });
       }
+      fileMatch = fileRegex.exec(artifactContent);
     }
   }
 
@@ -397,7 +403,8 @@ export function extractFilesFromContent(content: string): GeneratedFile[] {
       /<boltAction\s+type="file"\s+filePath="([^"]+)">([\s\S]*?)(?=<\/boltAction>|$)/g;
     let match;
 
-    while ((match = fileRegex.exec(content)) !== null) {
+    match = fileRegex.exec(content);
+    while (match !== null) {
       const [_, path, fileContent] = match;
       if (path && fileContent) {
         files.push({
@@ -405,6 +412,7 @@ export function extractFilesFromContent(content: string): GeneratedFile[] {
           content: he.decode(fileContent.trim()),
         });
       }
+      match = fileRegex.exec(content);
     }
   }
 

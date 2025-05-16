@@ -2,20 +2,20 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { WebContainer } from '@webcontainer/api';
-import { FileEntry } from '@/types';
+import { type FileEntry } from '@/types';
 import {
-  OPENROUTER_API_URL,
-  DEFAULT_MODEL,
+  // OPENROUTER_API_URL,
+  // DEFAULT_MODEL,
   MAX_TERMINAL_EXECUTION_TIME,
 } from '@/lib/constants';
-import { getSystemPrompt } from '@/lib/prompt';
+// import { getSystemPrompt } from '@/lib/prompt';
 import he from 'he';
 
 // Define constants for tags to ensure consistency
 const BOLT_ACTION_TAG_OPEN = '<boltAction';
 const BOLT_ACTION_TAG_CLOSE = '</boltAction>';
-const BOLT_ARTIFACT_TAG_OPEN = '<boltArtifact';
-const BOLT_ARTIFACT_TAG_CLOSE = '</boltArtifact>';
+// const BOLT_ARTIFACT_TAG_OPEN = '<boltArtifact';
+// const BOLT_ARTIFACT_TAG_CLOSE = '</boltArtifact>';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -45,7 +45,7 @@ export const useAIChat = (
   files: Record<string, FileEntry>,
   setFiles: (files: Record<string, FileEntry>) => void,
   webContainerInstance: WebContainer | null,
-  selectedFile: string | null,
+  // selectedFile: string | null,
   setSelectedFile: (file: string | null) => void,
   runTerminalCommand?: (
     command: string,
@@ -345,6 +345,7 @@ export const useAIChat = (
         try {
           await webContainer.fs.mkdir(dirPath, { recursive: true });
         } catch (dirError) {
+          console.error('dirError', dirError);
           // Ignore if directory already exists
           console.log(
             `Directory already exists or could not be created: ${dirPath}`
@@ -383,6 +384,7 @@ export const useAIChat = (
         try {
           await webContainer.fs.mkdir(dirPath, { recursive: true });
         } catch (dirError) {
+          console.error('dirError', dirError);
           // Ignore if directory already exists
           console.log(`Directory exists or could not be created: ${dirPath}`);
         }
@@ -418,13 +420,15 @@ export const useAIChat = (
     let commands: string[] = [];
 
     // First, extract all commands
-    while ((shellMatch = shellCmdRegex.exec(content)) !== null) {
+    shellMatch = shellCmdRegex.exec(content);
+    while (shellMatch !== null) {
       commandsFound = true;
       const command = he.decode(shellMatch[1].trim());
 
       if (command) {
         commands.push(command);
       }
+      shellMatch = shellCmdRegex.exec(content);
     }
 
     if (commands.length === 0) return false;
@@ -532,6 +536,7 @@ export const useAIChat = (
     try {
       return JSON.parse(data);
     } catch (e) {
+      console.error(e);
       // If it's not JSON, return the raw data
       return data;
     }
@@ -544,7 +549,7 @@ export const useAIChat = (
   ) => {
     let assistantContent = '';
     let buffer = '';
-    let inProgressContent = '';
+    let _inProgressContent = '';
 
     try {
       // Initialize file extraction state if not already done
@@ -571,13 +576,16 @@ export const useAIChat = (
         // Decode this chunk
         const chunk = decoder.decode(value, { stream: true });
         buffer += chunk;
-
         // Process lines
-        let newlineIndex;
-        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+        let newlineIndex = buffer.indexOf('\n');
+        while (newlineIndex !== -1) {
           const line = buffer.slice(0, newlineIndex);
           buffer = buffer.slice(newlineIndex + 1);
 
+          if (!line || line.trim() === '') {
+            newlineIndex = buffer.indexOf('\n');
+            continue;
+          }
           if (!line || line.trim() === '') continue;
 
           // Handle both SSE and non-SSE formatted lines
@@ -594,13 +602,13 @@ export const useAIChat = (
             if (parsed) {
               if (typeof parsed === 'string') {
                 // Plain text content
-                inProgressContent += parsed;
+                _inProgressContent += parsed;
                 assistantContent += parsed;
                 await processStreamedContent(parsed);
               } else if (parsed.type === 'token') {
                 // Token from AI
                 const token = parsed.value || '';
-                inProgressContent += token;
+                _inProgressContent += token;
                 assistantContent += token;
                 await processStreamedContent(token);
               } else {
@@ -643,7 +651,7 @@ export const useAIChat = (
               .replace(/\\n/g, '\n')
               .replace(/\\\\/g, '\\');
 
-            inProgressContent += content;
+            _inProgressContent += content;
             assistantContent += content;
             await processStreamedContent(content);
           } else if (
@@ -659,12 +667,12 @@ export const useAIChat = (
             const contentMatch = line.match(/[0-9]+:"(.*)"/);
             if (contentMatch && contentMatch[1]) {
               const extractedContent = contentMatch[1];
-              inProgressContent += extractedContent;
+              _inProgressContent += extractedContent;
               assistantContent += extractedContent;
               await processStreamedContent(extractedContent);
             } else {
               // If we can't parse it in any known format, add it as-is
-              inProgressContent += line;
+              _inProgressContent += line;
               assistantContent += line;
               await processStreamedContent(line);
             }
@@ -673,7 +681,7 @@ export const useAIChat = (
 
         // Process any remaining content in the buffer if it's substantial
         if (buffer.length > 0 && !buffer.trim().startsWith(':')) {
-          inProgressContent += buffer;
+          _inProgressContent += buffer;
           assistantContent += buffer;
           await processStreamedContent(buffer);
         }
@@ -846,12 +854,14 @@ export const useAIChat = (
       );
       let match;
 
-      while ((match = fileRegex.exec(finalContent)) !== null) {
+      match = fileRegex.exec(finalContent);
+      while (match !== null) {
         const filePath = he.decode(match[1]);
         const fileContent = match[2];
 
         // Skip if already processed
         if (state.completedFiles.has(filePath)) {
+          match = fileRegex.exec(finalContent);
           continue;
         }
 
@@ -864,6 +874,8 @@ export const useAIChat = (
         // Mark as completed
         state.completedFiles.add(filePath);
         setCompletedFiles(new Set(state.completedFiles));
+
+        match = fileRegex.exec(finalContent);
       }
     } catch (error) {
       console.error('Error in final file search:', error);

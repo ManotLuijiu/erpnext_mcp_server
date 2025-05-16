@@ -42,7 +42,7 @@ commands = [
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/erpnext_mcp_server/css/erpnext_mcp_server.css"
-app_include_css = ["erpnext_mcp_server.bundle.css"]
+app_include_css = ["erpnext_mcp_server.bundle.css", "xterm.bundle.css"]
 
 # app_include_js = "/assets/erpnext_mcp_server/js/erpnext_mcp_server.js"
 # app_include_js = ["erpnext_mcp_server.bundle.js"]
@@ -278,4 +278,9 @@ scheduler_events = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
-website_route_rules = [{'from_route': '/ai-chatbot-client/<path:app_path>', 'to_route': 'ai-chatbot-client'},]
+website_route_rules = [
+    {
+        "from_route": "/ai-chatbot-client/<path:app_path>",
+        "to_route": "ai-chatbot-client",
+    },
+]

@@ -3,7 +3,7 @@
 import React, { memo, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { createHighlighter, BundledLanguage } from 'shiki';
+import { createHighlighter, type BundledLanguage } from 'shiki';
 import { Loader2, Copy, Check, Terminal, FileCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -295,7 +295,7 @@ const isBashCommand = (text: string): boolean => {
 export const Markdown = memo(
   ({
     content,
-    isStreaming,
+    // isStreaming,
     activeFile,
     completedFiles,
     activeCommand,
@@ -345,6 +345,7 @@ export const Markdown = memo(
             components={{
               // The key here is to individually define each component without the inline property issue
               code: ({ className, children, ...rest }) => {
+                console.log('...rest', rest);
                 const codeStr = String(children).replace(/\n$/, '');
 
                 // Detect if the code block is inline based on classname presence

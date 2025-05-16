@@ -2,17 +2,17 @@
 
 import React, { useRef, useEffect, useState, createRef } from 'react';
 import { useWebContainer } from '@/hooks/useWebContainer';
-import Terminal, { TerminalRef } from '@/components/Terminal';
+import Terminal, { type TerminalRef } from '@/components/Terminal';
 import { cn } from '@/lib/utils';
 import { MAX_TERMINALS } from '@/stores/terminal';
 import { X, Plus, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import {
-  ResizablePanel,
-  ResizablePanelGroup,
-  ResizableHandle,
-} from '@/components/ui/resizable';
+// import {
+//   ResizablePanel,
+//   ResizablePanelGroup,
+//   ResizableHandle,
+// } from '@/components/ui/resizable';
 
 interface TerminalTabsProps {
   className?: string;
@@ -22,50 +22,65 @@ interface TerminalTabsProps {
   onClose?: () => void;
   onMinimize?: () => void;
   onMaximize?: () => void;
+  onReady?: (term: any) => void;
   mode?: 'default' | 'minimized' | 'fullscreen';
 }
 
 const TerminalTabs: React.FC<TerminalTabsProps> = ({
   className,
-  onResize,
   height,
   defaultHeight = '250px',
   onClose,
-  onMinimize,
+  // onMinimize,
   onMaximize,
+  onReady,
   mode = 'default',
 }) => {
   const [activeTab, setActiveTab] = useState('main');
-  const [isResizing, setIsResizing] = useState(false);
   const [terminals, setTerminals] = useState<{ id: string; label: string }[]>([
     { id: 'main', label: 'Bolt' },
   ]);
 
   // Create refs for each terminal
-  const terminalRefs = useRef<Record<string, React.RefObject<TerminalRef>>>({});
+  const terminalRefs = useRef<
+    Record<string, React.RefObject<TerminalRef | null>>
+  >({});
 
   // Initialize the WebContainer with the main terminal reference
-  const {
-    webContainerInstance,
-    runNpmInstall,
-    startDevServer,
-    isInitializingWebContainer,
-    isInstallingDeps,
-    isStartingDevServer,
-    webContainerURL,
-    runTerminalCommand,
-  } = useWebContainer(
-    terminalRefs.current['main'] as React.MutableRefObject<TerminalRef | null>
-  );
+  // We're not using the returned instance directly in this component
+  useWebContainer(terminalRefs.current['main']);
+
+  // Initialize the WebContainer with the main terminal reference
+  // const {
+  //   webContainerInstance,
+  //   runNpmInstall,
+  //   startDevServer,
+  //   isInitializingWebContainer,
+  //   isInstallingDeps,
+  //   isStartingDevServer,
+  //   webContainerURL,
+  //   runTerminalCommand,
+  // } = useWebContainer(
+  //   mainTerminalRef as React.MutableRefObject<TerminalRef | null>
+  // );
 
   // Initialize refs for each terminal tab
   useEffect(() => {
     terminals.forEach((terminal) => {
       if (!terminalRefs.current[terminal.id]) {
-        terminalRefs.current[terminal.id] = createRef<TerminalRef>();
+        terminalRefs.current[terminal.id] = createRef<TerminalRef | null>();
       }
     });
   }, [terminals]);
+
+  // Add terminal ready notification logic
+  useEffect(() => {
+    const mainTerminalRef = terminalRefs.current['main'];
+    if (mainTerminalRef?.current?.terminal && onReady) {
+      console.log('Terminal ready, notifying parent component');
+      onReady(mainTerminalRef.current.terminal);
+    }
+  }, [terminalRefs.current['main']?.current?.terminal, onReady]);
 
   // Handle terminal resize
   const handleTerminalResize = (
@@ -104,15 +119,6 @@ const TerminalTabs: React.FC<TerminalTabsProps> = ({
     if (activeTab === id) {
       setActiveTab(newTerminals[0].id);
     }
-  };
-
-  // Handle panel resizing
-  const handlePanelResize = (sizes: number[]) => {
-    if (!isResizing) return;
-    const containerHeight =
-      document.getElementById('terminal-container')?.clientHeight || 300;
-    const newHeight = `${Math.round((containerHeight * sizes[0]) / 100)}px`;
-    onResize?.(newHeight);
   };
 
   // Clear the active terminal
@@ -177,7 +183,7 @@ const TerminalTabs: React.FC<TerminalTabsProps> = ({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-[#6e6e6e] hover:text-white"
-                  onClick={onMinimize}
+                  onClick={onClose}
                 >
                   <Minimize2 size={14} />
                 </Button>

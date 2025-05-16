@@ -138,3 +138,26 @@
     justify-content: space-between;
   }
 }
+
+.indicator-label {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.indicator.red {
+  background-color: #f44336;
+}
+.indicator.yellow {
+  background-color: #ffeb3b;
+}
+.indicator.green {
+  background-color: #4caf50;
+  margin-right: 2px;
+}

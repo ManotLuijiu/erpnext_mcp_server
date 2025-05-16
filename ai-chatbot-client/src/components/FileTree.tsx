@@ -3,8 +3,8 @@
 import { ChevronRight, ChevronDown, File, Folder } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { FileEntry } from '@/types';
-import { useState, useEffect, useCallback } from 'react';
+import { type FileEntry } from '@/types';
+import React, { useState, useEffect, useCallback, type JSX } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 interface FileTreeNodeProps {
@@ -26,7 +26,7 @@ const FileTreeNode = ({
   onSelectFile,
   isExpanded,
   onToggleExpand,
-  hasChildren,
+  // hasChildren,
 }: FileTreeNodeProps) => {
   const isSelected = selectedFile === filePath;
 

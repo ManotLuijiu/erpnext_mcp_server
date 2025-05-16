@@ -1,4 +1,5 @@
-import { Template } from '../types/index';
+import { type Template } from '@/types';
+// ai-chatbot-client/src/types/index.ts
 
 export const OPENROUTER_API_URL =
   'https://openrouter.ai/api/v1/chat/completions';

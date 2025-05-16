@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { FileEntry } from '@/types'; // Assuming FileEntry is in @/types
+import { type FileEntry } from '@/types'; // Assuming FileEntry is in @/types
 import {
   ChevronRight,
   FileIcon,
-  Loader2,
+  // Loader2,
   LoaderCircle,
   Pencil,
-  Save,
+  // Save,
 } from 'lucide-react';
-import Editor, { OnMount } from '@monaco-editor/react';
+import Editor, { type OnMount } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
 import { BinaryFile } from '@/components/BinaryFile'; // Import the new component
 import { Badge } from './ui/badge';
@@ -440,19 +440,23 @@ export function CodeEditor({
     );
   }
 
+  // Status Indicators (for error) must be rendered inside the returned JSX
   return (
     <div className="relative h-full w-full bg-[#101012] flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center px-4 py-2 bg-[#161618] border-b border-[#313133] flex-shrink-0">
         <div className="text-sm text-[#f3f6f6] truncate flex items-center">
           {selectedFile.split('/').map((part, index, array) => (
-            <span key={index} className="flex items-center">
-              {index > 0 &&
-                (selectedFile.startsWith('/') ? index > 1 : true) && (
-                  <ChevronRight className="h-3 w-3 mx-0.5 text-[#969798]" />
-                )}
-              {part}
-            </span>
+            <>
+              <pre>{array}</pre>
+              <span key={index} className="flex items-center">
+                {index > 0 &&
+                  (selectedFile.startsWith('/') ? index > 1 : true) && (
+                    <ChevronRight className="h-3 w-3 mx-0.5 text-[#969798]" />
+                  )}
+                {part}
+              </span>
+            </>
           ))}
         </div>
         {isStreaming && !isBinaryOrUnreadable && (
@@ -551,10 +555,10 @@ export function CodeEditor({
             }}
             beforeMount={(monaco) => {
               try {
+                console.log('monaco', monaco);
                 // Define the custom theme (already defined in onMount)
                 // No need to redefine the theme here
               } catch (e) {
-                // Handle potential error if theme is already defined (e.g., during hot reload)
                 console.warn(
                   'Theme might already be defined. Falling back to default theme.',
                   e
@@ -563,17 +567,16 @@ export function CodeEditor({
             }}
           />
         )}
+        {/* Status Indicators */}
+        {error &&
+          !isBinaryOrUnreadable &&
+          !errorSuppressedRef.current &&
+          !isStreaming && (
+            <div className="absolute top-12 left-3 bg-red-500/80 text-white px-3 py-1.5 rounded-md z-10 shadow-md">
+              <span className="text-xs font-medium">{error}</span>
+            </div>
+          )}
       </div>
-
-      {/* Status Indicators */}
-      {error &&
-        !isBinaryOrUnreadable &&
-        !errorSuppressedRef.current &&
-        !isStreaming && (
-          <div className="absolute top-12 left-3 bg-red-500/80 text-white px-3 py-1.5 rounded-md z-10 shadow-md">
-            <span className="text-xs font-medium">{error}</span>
-          </div>
-        )}
     </div>
   );
 }

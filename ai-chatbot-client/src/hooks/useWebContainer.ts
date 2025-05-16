@@ -3,12 +3,12 @@
 import {
   useState,
   useEffect,
-  MutableRefObject,
+  type RefObject,
   useRef,
   useCallback,
 } from 'react';
-import { WebContainer, WebContainerProcess } from '@webcontainer/api';
-import { TerminalRef } from '@/components/Terminal';
+import { WebContainer, type WebContainerProcess } from '@webcontainer/api';
+import { type TerminalRef } from '@/components/Terminal';
 import { webContainerManager } from '@/lib/WebContainerManager';
 import { terminalActions } from '@/stores/terminal';
 
@@ -31,8 +31,10 @@ const getPersistentShellDimensions = (shell: any) => {
   }
 };
 
+console.log('getPersistentShellDimensions', getPersistentShellDimensions);
+
 export const useWebContainer = (
-  terminalRef?: MutableRefObject<TerminalRef | null>
+  terminalRef?: RefObject<TerminalRef | null>
 ) => {
   const [webContainerInstance, setWebContainerInstance] =
     useState<WebContainer | null>(null);
@@ -113,7 +115,7 @@ export const useWebContainer = (
     setInitializationError(null);
     terminalActions.setTerminalRunning(terminalId, true, 'npm install'); // Update store state
     terminalActions.setTerminalInteractive(terminalId, false);
-    terminalRef.current?.writeToTerminal(
+    terminalRef?.current?.writeToTerminal(
       '\r\n\u001b[1;34m$ npm install\u001b[0m\r\n'
     ); // Echo command
 
@@ -138,15 +140,15 @@ export const useWebContainer = (
       if (exitCode !== 0) {
         const errorMsg = `Failed to install dependencies (exit code ${exitCode}). Check terminal.`;
         setInitializationError(errorMsg);
-        terminalRef.current?.writeToTerminal(
+        terminalRef?.current?.writeToTerminal(
           `\r\n\u001b[31m${errorMsg}\u001b[0m\r\n`
         );
         terminalActions.setTerminalRunning(terminalId, false); // Update store state
         terminalActions.setTerminalInteractive(terminalId, true);
-        terminalRef.current?.writeToTerminal(`\r\n❯ `); // Add prompt
+        terminalRef?.current?.writeToTerminal(`\r\n❯ `); // Add prompt
         return false;
       }
-      terminalRef.current?.writeToTerminal(
+      terminalRef?.current?.writeToTerminal(
         `\r\n\u001b[32mDependencies installed successfully.\u001b[0m\r\n`
       );
       // Don't set interactive yet, wait for dev server
@@ -155,12 +157,12 @@ export const useWebContainer = (
       console.error('npm install error:', error);
       const errorMsg = `Failed to install dependencies: ${error.message}`;
       setInitializationError(errorMsg);
-      terminalRef.current?.writeToTerminal(
+      terminalRef?.current?.writeToTerminal(
         `\r\n\u001b[31mError running npm install: ${error.message}\u001b[0m\r\n`
       );
       terminalActions.setTerminalRunning(terminalId, false); // Update store state
       terminalActions.setTerminalInteractive(terminalId, true);
-      terminalRef.current?.writeToTerminal(`\r\n❯ `); // Add prompt
+      terminalRef?.current?.writeToTerminal(`\r\n❯ `); // Add prompt
       return false;
     } finally {
       setIsInstallingDeps(false);
@@ -189,7 +191,7 @@ export const useWebContainer = (
     setInitializationError(null);
     terminalActions.setTerminalRunning(terminalId, true, 'npm run dev'); // Update store state
     terminalActions.setTerminalInteractive(terminalId, false);
-    terminalRef.current?.writeToTerminal(
+    terminalRef?.current?.writeToTerminal(
       `\r\n\u001b[1;34m$ npm run dev\u001b[0m\r\n`
     ); // Echo command
 
@@ -223,7 +225,7 @@ export const useWebContainer = (
               return prev.map((p) => (p.port === port ? { port, url } : p));
             return [...prev, { port, url }].sort((a, b) => a.port - b.port);
           });
-          if (terminalRef.current) {
+          if (terminalRef?.current) {
             terminalRef.current.writeToTerminal(
               `\r\n\u001b[32mDev server ready at: ${url}\u001b[0m\r\n`
             );
@@ -233,7 +235,7 @@ export const useWebContainer = (
           setIsStartingDevServer(false);
           terminalActions.setTerminalRunning(terminalId, false); // Update store state
           terminalActions.setTerminalInteractive(terminalId, true);
-          if (terminalRef.current) {
+          if (terminalRef?.current) {
             terminalRef.current.writeToTerminal(`\r\n❯ `); // Show prompt
           }
         }
@@ -255,7 +257,7 @@ export const useWebContainer = (
             terminalActions.setTerminalRunning(terminalId, false); // Update store state
             terminalActions.setTerminalInteractive(terminalId, true);
           }
-          if (terminalRef.current) {
+          if (terminalRef?.current) {
             terminalRef.current.writeToTerminal(
               `\r\n\u001b[33mDev server process exited (code ${exitCode})\u001b[0m\r\n`
             );
@@ -265,7 +267,7 @@ export const useWebContainer = (
               `Development server exited with error code ${exitCode}. Check terminal.`
             );
           }
-          if (terminalRef.current) {
+          if (terminalRef?.current) {
             terminalRef.current.writeToTerminal(`\r\n❯ `); // Show prompt after exit
           }
         })
@@ -276,7 +278,7 @@ export const useWebContainer = (
           setDevServerProcess(null);
           terminalActions.setTerminalRunning(terminalId, false); // Update store state
           terminalActions.setTerminalInteractive(terminalId, true);
-          if (terminalRef.current) {
+          if (terminalRef?.current) {
             terminalRef.current.writeToTerminal(`\r\n❯ `);
           }
         });
@@ -286,14 +288,14 @@ export const useWebContainer = (
       setDevServerProcess(null);
       const errorMsg = `Error starting development server: ${error.message}`;
       setInitializationError(errorMsg);
-      if (terminalRef.current) {
+      if (terminalRef?.current) {
         terminalRef.current.writeToTerminal(
           `\r\n\u001b[31m${errorMsg}\u001b[0m\r\n`
         );
       }
       terminalActions.setTerminalRunning(terminalId, false); // Update store state
       terminalActions.setTerminalInteractive(terminalId, true);
-      if (terminalRef.current) {
+      if (terminalRef?.current) {
         terminalRef.current.writeToTerminal(`\r\n❯ `);
       }
     }
@@ -340,7 +342,7 @@ export const useWebContainer = (
     const terminalId = 'main';
     if (devServerProcess) {
       console.log('Stopping dev server process...');
-      terminalRef.current?.writeToTerminal(
+      terminalRef?.current?.writeToTerminal(
         '\r\n\u001b[33mStopping dev server...\u001b[0m\r\n'
       );
       terminalActions.setTerminalInteractive(terminalId, false); // Update store state
@@ -354,13 +356,13 @@ export const useWebContainer = (
         await devServerProcess.kill();
         setDevServerProcess(null);
         setIsStartingDevServer(false);
-        terminalRef.current?.writeToTerminal(
+        terminalRef?.current?.writeToTerminal(
           '\r\n\u001b[32mDev server stopped.\u001b[0m\r\n'
         );
         console.log('Dev server process stopped.');
       } catch (error) {
         console.error('Error stopping dev server process:', error);
-        terminalRef.current?.writeToTerminal(
+        terminalRef?.current?.writeToTerminal(
           `\r\n\u001b[31mError stopping dev server: ${error instanceof Error ? error.message : String(error)}\u001b[0m\r\n`
         );
       } finally {
@@ -368,7 +370,7 @@ export const useWebContainer = (
         setIsStartingDevServer(false);
         terminalActions.setTerminalRunning(terminalId, false); // Update store state
         terminalActions.setTerminalInteractive(terminalId, true);
-        terminalRef.current?.writeToTerminal(`\r\n❯ `);
+        terminalRef?.current?.writeToTerminal(`\r\n❯ `);
       }
     }
   }, [devServerProcess, terminalRef]);
@@ -398,7 +400,7 @@ export const useWebContainer = (
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           setInitializationError(`WebContainer error: ${errorMessage}`);
-          terminalRef.current?.writeToTerminal(
+          terminalRef?.current?.writeToTerminal(
             `\r\n\u001b[31mWebContainer Error: ${errorMessage}\u001b[0m\r\n`
           );
           if (isInitializingWebContainer) setIsInitializingWebContainer(false);

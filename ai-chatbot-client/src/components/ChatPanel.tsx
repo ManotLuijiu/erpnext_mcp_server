@@ -20,8 +20,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserMessage } from '@/components/chat/UserMessage';
 import {
   AssistantMessage,
-  ProgressType,
-  ProgressStatus,
+  type ProgressType,
+  type ProgressStatus,
 } from '@/components/chat/AssistantMessage';
 import { LoadingProgressPanel } from '@/components/chat/LoadingProgressPanel';
 import { ErrorMessage } from '@/components/chat/ErrorMessage';

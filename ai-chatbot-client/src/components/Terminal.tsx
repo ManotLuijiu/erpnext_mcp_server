@@ -1,6 +1,6 @@
 'use client';
 
-import React, {
+import {
   useEffect,
   useRef,
   useState,
@@ -12,7 +12,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { useWebContainer } from '@/hooks/useWebContainer';
 import { cn } from '@/lib/utils';
-import { MAX_TERMINALS } from '@/stores/terminal';
+// import { MAX_TERMINALS } from '@/stores/terminal';
 
 // Import styles
 import '@xterm/xterm/css/xterm.css';
@@ -52,7 +52,7 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
       className,
       onCommand,
       onResize,
-      mode = 'default',
+      // mode = 'default',
       initialOptions,
     },
     ref
@@ -60,12 +60,13 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
     const terminalRef = useRef<HTMLDivElement>(null);
     const [terminal, setTerminal] = useState<XTerm | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
-    const [isTerminalReady, setIsTerminalReady] = useState(false);
+    // const [isTerminalReady, setIsTerminalReady] = useState(false);
     const [terminalSize, setTerminalSize] = useState({ cols: 80, rows: 24 });
-    const [command, setCommand] = useState('');
-    const { runTerminalCommand } = useWebContainer(
-      ref as React.MutableRefObject<TerminalRef | null>
-    );
+    // const [command, setCommand] = useState('');
+    // const { runTerminalCommand } = useWebContainer(
+    //   ref as React.MutableRefObject<TerminalRef | null>
+    // );
+    const { runTerminalCommand } = useWebContainer();
 
     // Initialize addons and terminal
     useEffect(() => {
@@ -176,11 +177,19 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
             term.write(data);
           }
 
-          setCommand(currentCommand);
+          // setCommand(currentCommand);
         });
 
         setTerminal(term);
-        setIsTerminalReady(true);
+        // setIsTerminalReady(true);
+
+        // Let parents know this terminal is ready
+        setTimeout(() => {
+          if (ref && 'current' in ref) {
+            // Trigger the update of the ref, which will notify parent components
+            // that rely on ref.current.terminal
+          }
+        }, 100);
 
         return () => {
           term.dispose();

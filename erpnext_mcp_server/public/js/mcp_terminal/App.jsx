@@ -358,22 +358,22 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="page-container">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="ml-4 text-sm font-medium">Web Terminal</span>
+      <header className="navbar">
+        <div id="mcp__terminal" className="container">
+          <div className="navbar-left">
+            <div className="indicator red"></div>
+            <div className="indicator yellow"></div>
+            <div className="indicator green"></div>
+            <span className="ml-2 text-muted">{__('Web Terminal')}</span>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+          <div className="navbar-right">
+            <div className="indicator-label">
               <div
-                className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                className={`indicator ${isConnected ? 'green' : 'red'}`}
               ></div>
-              <span className="text-xs text-gray-400">
+              <span className="text-muted small">
                 {isConnected ? 'Connected' : 'Disconnected'}
               </span>
             </div>
@@ -382,25 +382,69 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <div className="bg-gray-800 rounded-lg shadow-xl overflow-hidden border border-gray-700">
+      <main className="main-section">
+        <div className="terminal-wrapper">
           <div
             ref={terminalRef}
-            className="h-[calc(100vh-12rem)] w-full"
-            style={{ minHeight: '400px' }}
+            className="terminal-body"
+            style={{ minHeight: '400px', height: 'calc(100vh - 12rem)' }}
           />
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-800 border-t border-gray-700">
-        <div className="container mx-auto px-4 py-2">
-          <p className="text-xs text-gray-400 text-center">
+      <footer className="footer">
+        <div className="container">
+          <p className="text-muted small text-center">
             Press Ctrl+C to clear the terminal • Ctrl+L to clear the screen
           </p>
         </div>
       </footer>
     </div>
+
+    // <div className="min-h-screen bg-gray-900 text-white">
+    //   {/* Header */}
+    //   <header className="bg-gray-800 border-b border-gray-700">
+    //     <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+    //       <div className="flex items-center space-x-2">
+    //         <div className="w-3 h-3 rounded-full bg-red-500"></div>
+    //         <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+    //         <div className="w-3 h-3 rounded-full bg-green-500"></div>
+    //         <span className="ml-4 text-sm font-medium">Web Terminal</span>
+    //       </div>
+    //       <div className="flex items-center space-x-4">
+    //         <div className="flex items-center space-x-2">
+    //           <div
+    //             className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+    //           ></div>
+    //           <span className="text-xs text-gray-400">
+    //             {isConnected ? 'Connected' : 'Disconnected'}
+    //           </span>
+    //         </div>
+    //       </div>
+    //     </div>
+    //   </header>
+
+    //   {/* Main Content */}
+    //   <main className="container mx-auto px-4 py-6">
+    //     <div className="bg-gray-800 rounded-lg shadow-xl overflow-hidden border border-gray-700">
+    //       <div
+    //         ref={terminalRef}
+    //         className="h-[calc(100vh-12rem)] w-full"
+    //         style={{ minHeight: '400px' }}
+    //       />
+    //     </div>
+    //   </main>
+
+    //   {/* Footer */}
+    //   <footer className="bg-gray-800 border-t border-gray-700">
+    //     <div className="container mx-auto px-4 py-2">
+    //       <p className="text-xs text-gray-400 text-center">
+    //         Press Ctrl+C to clear the terminal • Ctrl+L to clear the screen
+    //       </p>
+    //     </div>
+    //   </footer>
+    // </div>
   );
 }
 
