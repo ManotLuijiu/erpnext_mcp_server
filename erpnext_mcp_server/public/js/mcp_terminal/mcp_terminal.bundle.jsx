@@ -1,5 +1,3 @@
-// erpnext_mcp_server/public/js/mcp_terminal/mcp_terminal.bundle.jsx
-
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
@@ -63,6 +61,7 @@ window.erpnext_mcp_server.mcp_terminal = {
   document.addEventListener('DOMContentLoaded', function () {
     // Check if the container exists
     const container = document.getElementById('mcp-terminal-react-root');
+    console.log('container', container);
     if (container) {
       console.log('Auto-initializing MCP Terminal');
       window.erpnext_mcp_server.mcp_terminal.create(container);

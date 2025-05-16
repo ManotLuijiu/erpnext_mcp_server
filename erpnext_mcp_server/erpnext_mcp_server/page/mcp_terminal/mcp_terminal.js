@@ -5,6 +5,9 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
     single_column: true,
   });
 
+  const socketTransport = frappe.realtime.socket.io?.engine?.transport?.name;
+  console.log('socketTransport', socketTransport);
+
   // Set indicator to show beta status
   page.set_indicator('Beta', 'orange');
 
@@ -18,7 +21,7 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
       __('Connect MCP'),
       function () {
         // Toggle connect/disconnect
-        var $btn = $('.mcp-connect-btn');
+        const $btn = $('.mcp-connect-btn');
 
         if ($btn.hasClass('btn-success')) {
           // Currently connected, disconnect
@@ -126,9 +129,10 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
   });
 
   // Create the terminal container in the page
-  $(
-    '<div id="mcp-terminal-react-root" class="mcp-terminal-container"></div>'
-  ).appendTo(page.main);
+  // $(
+  //   '<div id="mcp-terminal-react-root" class="mcp-terminal-container"></div>'
+  // ).appendTo(page.main);
+  $('<div id="mcp-terminal-react-root"></div>').appendTo(page.main);
 
   // Add settings menu
   page.add_menu_item(__('Terminal Settings'), function () {
@@ -184,7 +188,7 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
             </div>
           </div>
           <div class="ml-3">
-            <button class="btn btn-primary btn-sm mcp-connect-btn" onclick="frappe.mcp_terminal_connect()">
+            <button class="btn btn-primary btn-sm mcp-connect-btn">
               <i class="fa fa-plug mr-1"></i> ${__('Connect MCP')}
             </button>
           </div>

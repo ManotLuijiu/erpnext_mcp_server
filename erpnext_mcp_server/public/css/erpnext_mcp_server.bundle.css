@@ -485,3 +485,7 @@
 #mcp__terminal .indicator.green {
   background-color: #4caf50;
 }
+
+.terminal.xterm {
+  padding: 0 5px;
+}
