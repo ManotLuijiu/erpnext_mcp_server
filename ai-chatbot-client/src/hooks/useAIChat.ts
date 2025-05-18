@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { WebContainer } from '@webcontainer/api';
+import { type WebContainer } from '@webcontainer/api';
 import { type FileEntry } from '@/types';
 import {
   // OPENROUTER_API_URL,
