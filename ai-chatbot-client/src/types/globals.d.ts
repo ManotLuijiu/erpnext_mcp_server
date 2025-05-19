@@ -6,6 +6,7 @@ declare global {
         lang: string;
         __messages;
         translations_hash;
+        site_name;
       };
       // add more properties here if needed
       __: (text: string) => string;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import './socketio_client';
 
 // Ensure the component is available in the global namespace
 window.erpnext_mcp_server = window.erpnext_mcp_server || {};
