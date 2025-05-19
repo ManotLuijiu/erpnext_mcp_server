@@ -100,3 +100,33 @@ declare global {
     webContainerInstance: WebContainer;
   }
 }
+
+export type ModelProvider = 'openai' | 'claude';
+
+export interface TranslationRequest {
+  filePath: string;
+  entryId: string;
+  modelProvider?: ModelProvider;
+  model?: string;
+}
+
+export type TranslationResult = {
+  success: boolean;
+  translation?: string;
+  log_file?: string;
+  translated_count?: number;
+  error?: string;
+};
+
+export interface TranslationStatistics {
+  total: number;
+  translated: number;
+  untranslated: number;
+  percentage: number;
+}
+
+export interface StatusMessage {
+  type: 'success' | 'error' | 'info' | 'warning';
+  message: string;
+  key?: string;
+}

@@ -11,10 +11,13 @@ declare global {
 
 export function initSocket() {
   const host = window.location.hostname;
-  const siteName = window.site_name;
+  // const siteName = window.site_name;
+  const siteName = window.frappe ? window.frappe.boot.site_name : '';
   const port = window.location.port ? `:${socketio_port}` : '';
   const protocol = port ? 'http' : 'https';
-  const url = `${protocol}://${host}${port}/${siteName}`;
+  // const url = `${protocol}://${host}${port}/${siteName}`;
+  // const url = `${protocol}://${host}${port}`;
+  const url = `${protocol}://${host}${port ? `:${port}` : ''}`;
 
   console.log('host socket.js', host);
   console.log('siteName socket.js', siteName);

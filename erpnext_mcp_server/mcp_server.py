@@ -1,12 +1,12 @@
-import os
 import json
-import frappe
-from pathlib import Path
+import os
 from datetime import datetime
+from pathlib import Path
 
-from mcp.server.fastmcp import FastMCP, Context
+import frappe
+from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.fastmcp.utilities.types import Image
-from mcp.types import TextContent, ToolAnnotations
+from mcp.types import TextContent, Annotations
 
 # Initialize the MCP server with a name and instructions
 server = FastMCP(
@@ -27,7 +27,7 @@ server = FastMCP(
 
 @server.tool(
     description="Get a document from the database",
-    annotations=ToolAnnotations(readOnlyHint=True),
+    annotations=Annotations(readOnlyHint=True),
 )
 async def get_document(doctype: str, name: str, ctx: Context = None) -> dict:
     """Retrieve a document from ERPNext by doctype and name.
@@ -159,9 +159,11 @@ async def list_files(path: str = ".", ctx: Context = None) -> list:
                     "name": item,
                     "path": os.path.relpath(item_path, site_path),
                     "is_dir": os.path.isdir(item_path),
-                    "size": os.path.getsize(item_path)
-                    if not os.path.isdir(item_path)
-                    else 0,
+                    "size": (
+                        os.path.getsize(item_path)
+                        if not os.path.isdir(item_path)
+                        else 0
+                    ),
                     "modified": datetime.fromtimestamp(
                         os.path.getmtime(item_path)
                     ).isoformat(),
@@ -557,9 +559,9 @@ async def get_translation_stats(language_code: str = "th", ctx: Context = None) 
             "language": language_code,
             "total_translations": total,
             "missing_translations": missing,
-            "completion_percentage": round((total - missing) / total * 100, 2)
-            if total > 0
-            else 0,
+            "completion_percentage": (
+                round((total - missing) / total * 100, 2) if total > 0 else 0
+            ),
             "recently_added": recent,
         }
     except Exception as e:
