@@ -36,9 +36,14 @@ export default function App() {
       'MCP Terminal Connected. Type a command and press Enter.\r\n\r\n'
     );
 
+    // Test socket.io
+    frappe.realtime.on('item_connector', (data) => {
+      console.log('data testing socket.io', data);
+    });
+
     // Set up socket.io connection
     frappe.realtime.on('mcp_terminal_output', (data) => {
-      console.log('data', data);
+      console.log('data mcp_terminal_output', data);
       if (terminalInstanceRef.current) {
         terminalInstanceRef.current.write(data);
       }
@@ -57,6 +62,11 @@ export default function App() {
         // const currentLine = getCurrentLine(term);
 
         // console.log('currentLine', currentLine);
+
+        // Testing socket.io
+        frappe.realtime.emit('item_connector', (data) => {
+          console.log(data);
+        });
 
         // Send command to server
         frappe.realtime.emit('mcp_terminal_input', {

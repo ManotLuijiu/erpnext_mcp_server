@@ -1,8 +1,12 @@
-function chat_app_handlers(socket) {
-  socket.on('hello_chat', (data) => {
-    console.log('Received hello_chat:', data);
-    socket.emit('hello_chat_response', { message: 'Acknowledged' });
+function mcp_terminal_handlers(socket) {
+  socket.on('mcp_terminal_input', function (data) {
+    // Forward the event to the Python backend via Redis
+    socket.publish_doctype('events', {
+      event: 'mcp_terminal_input',
+      message: data,
+      room: 'user:' + socket.user,
+    });
   });
 }
 
-module.exports = chat_app_handlers;
+module.exports = mcp_terminal_handlers;

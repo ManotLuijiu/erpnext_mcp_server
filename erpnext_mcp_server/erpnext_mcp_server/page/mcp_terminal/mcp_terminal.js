@@ -198,6 +198,11 @@ frappe.pages['mcp-terminal'].on_page_load = function (wrapper) {
   `;
   $(page.body).prepend(helpHTML);
 
+  // Initialize socket connection
+  if (!frappe.realtime.socket || !frappe.realtime.socket.connected) {
+    frappe.realtime.connect();
+  }
+
   // Initialize the terminal
   frappe.require('mcp_terminal.bundle.jsx', () => {
     // Create a container div and append it to page.body

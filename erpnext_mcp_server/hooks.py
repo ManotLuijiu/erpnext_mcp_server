@@ -180,11 +180,26 @@ after_install = "erpnext_mcp_server.install.after_install"
 # 	}
 # }
 
+doc_events = {
+    "Item": {
+        "on_update": "erpnext_mcp_server.handlers.item_socketio_connector.delivery_slip_connector_socketio"
+    }
+}
+
+on_session_creation = [
+    "erpnext_mcp_server.handlers.socket_handlers.init_socket_handler"
+]
+
+on_logout = ["erpnext_mcp_server.handlers.socket_handlers.cleanup_on_logout"]
+
+on_app_exit = ["erpnext_mcp_server.handlers.socket_handlers.cleanup_all_processes"]
+
+
 # Scheduled Tasks
 # ---------------
-scheduler_events = {
-    "hourly": ["erpnext_mcp_server.api.terminal.cleanup_terminal_sessions"]
-}
+# scheduler_events = {
+#     "hourly": ["erpnext_mcp_server.api.terminal.cleanup_terminal_sessions"]
+# }
 
 # scheduler_events = {
 # 	"all": [
