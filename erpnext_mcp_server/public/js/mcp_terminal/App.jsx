@@ -5,6 +5,7 @@ import '@xterm/xterm/css/xterm.css';
 export default function App() {
   const terminalRef = useRef(null);
   const terminalInstanceRef = useRef(null);
+  const currentLineBuffer = useRef('');
 
   console.log('terminalRef', terminalRef);
   console.log('terminalInstanceRef', terminalInstanceRef);
@@ -43,48 +44,61 @@ export default function App() {
       }
     });
 
+    // Handle terminal input - using a difference approach
+    currentLineBuffer.current = '';
+
+    console.log('currentLineBuffer.current', currentLineBuffer.current);
+
     // Handle terminal input
     term.onKey(({ key, domEvent }) => {
       // Special key handling
       if (domEvent.key === 'Enter') {
         // Get the current line
-        const currentLine = getCurrentLine(term);
+        // const currentLine = getCurrentLine(term);
 
-        console.log('currentLine', currentLine);
+        // console.log('currentLine', currentLine);
 
         // Send command to server
         frappe.realtime.emit('mcp_terminal_input', {
-          command: currentLine,
+          command: currentLineBuffer.current,
         });
 
-        // Add new line in terminal
+        // Reset buffer and add new line
+        currentLineBuffer.current = '';
         term.write('\r\n');
       } else if (domEvent.key === 'Backspace') {
         // Handle backspace properly
-        const pos = term.buffer.active.cursorX;
-        if (pos > 0) {
+        // const pos = term.buffer.active.cursorX;
+        // if (pos > 0) {
+        //   term.write('\b \b');
+        // }
+        // Handle backspace
+        if (currentLineBuffer.current.length > 0) {
+          currentLineBuffer.current = currentLineBuffer.current.slice(0, -1);
           term.write('\b \b');
         }
       } else {
         // Write the character to the terminal
+        // Regular character input
+        currentLineBuffer.current += key;
         term.write(key);
       }
     });
 
     // Helper function to get current line content
-    function getCurrentLine(term) {
-      const currentRow = term.buffer.active.cursorY;
-      let line = '';
+    // function getCurrentLine(term) {
+    //   const currentRow = term.buffer.active.cursorY;
+    //   let line = '';
 
-      for (let i = 0; i < term.cols; i++) {
-        const cell = term.buffer.active.getCell(i, currentRow);
-        if (cell && cell.getChars()) {
-          line += cell.getChars();
-        }
-      }
+    //   for (let i = 0; i < term.cols; i++) {
+    //     const cell = term.buffer.active.getCell(i, currentRow);
+    //     if (cell && cell.getChars()) {
+    //       line += cell.getChars();
+    //     }
+    //   }
 
-      return line.trim();
-    }
+    //   return line.trim();
+    // }
 
     return () => {
       // Clean up
