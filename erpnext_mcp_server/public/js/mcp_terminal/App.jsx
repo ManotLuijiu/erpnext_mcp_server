@@ -2,36 +2,61 @@ import React, {
   useState,
   useEffect,
   useRef,
-  useCallback,
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import { XTerm } from 'react-xtermjs';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-// import { AttachAddon } from '@xterm/addon-attach';
 import '@xterm/xterm/css/xterm.css';
-import { io } from 'socket.io-client';
 import './styles/xterm.css';
 import './styles/terminal.css';
 
-function App() {
+const App = forwardRef((props, ref) => {
+  console.log('props', props);
+  console.log('frappe.realtime', frappe.realtime);
   const terminalRef = useRef(null);
-  const socketRef = useRef(null);
+  // const socketRef = useRef(null);
   const termRef = useRef(null);
   const fitAddonRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  frappe.realtime.init();
+
+  frappe.realtime.on('event_name', (data) => {
+    console.log(data);
+  });
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    connectToServer: () => {
+      return false;
+    },
+    disconnectFromServer: () => {
+      return false;
+    },
+    focusTerminal: () => {
+      if (termRef.current) {
+        termRef.current.focus();
+      }
+    },
+    getConnectionStatus: () => {
+      return {
+        isConnected: frappe.realtime.socket.connected || false,
+        status: frappe.realtime.socket.connected ? 'connected' : 'disconnected',
+      };
+    },
+  }));
+
   useEffect(() => {
     const term = new Terminal({
-      cursorBlink: true, // Enable cursor blinking
+      cursorBlink: true,
       fontSize: 14,
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
       theme: {
         background: '#1a1b26',
         foreground: '#a9b1d6',
         cursor: '#c0caf5',
-        cursorAccent: '#1a1b26', // Add cursor accent color
+        cursorAccent: '#1a1b26',
         selection: '#28344a',
         black: '#414868',
         red: '#f7768e',
@@ -58,8 +83,6 @@ function App() {
       allowTransparency: true,
     });
 
-    console.log('term App.jsx', term);
-
     // Create and load the FitAddon
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
@@ -72,82 +95,40 @@ function App() {
     if (terminalRef.current) {
       term.open(terminalRef.current);
       fitAddon.fit();
-
-      // Important: Focus the terminal to make cursor work
       term.focus();
     }
 
-    // Create Socket.IO connection - Use Frappe-compatible endpoint
-    // Use site URL for production or localhost for development
-    // const socketUrl1 = window.location.origin;
-    const protocol = window.location.protocol;
-    const host = window.location.host;
-
-    const { sitename, socketio_port } = frappe.boot;
-    // const testUrl = 'http://localhost:9000';
-    console.log('ENV App.jsx', process.env.NODE_ENV);
-    console.log('sitename App.jsx', sitename);
-    console.log('socket_port App.jsx', socketio_port);
-
-    const dev = process.env.NODE_ENV === 'development';
-
-    const socketUrl =
-      frappe && !dev
-        ? `${window.location.protocol}//${sitename}`
-        : 'http://localhost:9000';
-
-    console.log('protocol', protocol);
-    console.log('host', host);
-    console.log('sitename', sitename);
-    console.log('socketio_port', socketio_port);
-    console.log('socketUrl', socketUrl);
-
-    console.log('socketRef', socketRef);
-
-    // Configure Socket.IO connection with Frappe paths
-    socketRef.current = io(socketUrl, {
-      path: frappe ? '/socket.io/' : '/socket.io',
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      autoConnect: true,
-    });
-
-    // Socket.IO connection handlers
-    socketRef.current.on('connect', () => {
-      console.log('Connected to Socket.IO server');
+    // Connection status updates
+    const handleConnect = () => {
+      console.log('Connected to Frappe realtime');
       setIsConnected(true);
 
-      // Notify server about terminal size
-      const { rows, cols } = term;
-      socketRef.current.emit('terminal:resize', { rows, cols });
-
-      // Send session information to identity this terminal
-      socketRef.current.emit('terminal:connect', {
-        session_id: frappe.session.user_id || 'anonymous',
+      // Register this terminal with the server
+      frappe.realtime.emit('mcp:register', {
+        session_id: frappe.session.user || 'anonymous',
+        rows: term.rows,
+        cols: term.cols,
       });
 
-      // Write connection message to terminal
-      term.write('\r\n\x1b[32mConnected to MCP Server\x1b[0m\r\n');
-
-      // Focus the terminal after connection
+      term.write('\r\n\x1b[32mConnected to MCP Server\x1b[0m\r\n\r\n');
       term.focus();
-    });
+    };
 
-    socketRef.current.on('disconnect', (reason) => {
-      console.log('Disconnected from server:', reason);
+    const handleDisConnect = (reason) => {
+      console.log('Disconnected from server: ', reason);
       setIsConnected(false);
       term.write(
         '\r\n\x1b[33mDisconnected from server: ' + reason + '\x1b[0m\r\n'
       );
-    });
+    };
 
-    socketRef.current.on('terminal:output', (data) => {
+    // Set up event listeners
+    frappe.realtime.on('connect', handleConnect);
+    frappe.realtime.on('disconnect', handleDisConnect);
+
+    // Handle terminal output
+    frappe.realtime.on('mcp:output', (data) => {
       // Handle output data from server
-      console.log('Received data:', data);
       if (typeof data === 'string') {
         term.write(data);
       } else if (data && data.data) {
@@ -155,37 +136,39 @@ function App() {
       }
     });
 
-    // Set up terminal input handler
+    // Terminal input handler
     term.onData((data) => {
-      if (socketRef.current && socketRef.current.connected) {
-        console.log('Sending data:', data);
-        socketRef.current.emit('terminal:input', {
-          data: data,
-        });
-      }
+      console.log('data', data);
+      frappe.realtime.init();
+      frappe.realtime.emit('mcp:input', { data });
     });
 
+    // Terminal resize handler
+    term.onResize(({ rows, cols }) => {
+      frappe.realtime.emit('mcp:resize', { rows, cols });
+    });
+
+    // Window resize handler
     const handleResize = () => {
-      if (fitAddon && term) {
-        fitAddon.fit();
-        const { rows, cols } = term;
-        if (socketRef.current?.connected) {
-          socketRef.current.emit('resize', { rows, cols });
-        }
+      if (fitAddonRef.current && termRef.current) {
+        fitAddonRef.current.fit();
       }
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize();
 
+    // Clean up on unmount
     return () => {
-      if (term) {
-        term.dispose();
-      }
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
       window.removeEventListener('resize', handleResize);
+
+      if (termRef.current) {
+        termRef.current.dispose();
+      }
+
+      // Remove event listeners
+      frappe.realtime.off('connect');
+      frappe.realtime.off('disconnect');
+      frappe.realtime.off('mcp:output');
     };
   }, []);
 
@@ -198,7 +181,7 @@ function App() {
             <div className="indicator red"></div>
             <div className="indicator yellow"></div>
             <div className="indicator green"></div>
-            <span className="ml-2 text-muted">{__('Web Terminal')}</span>
+            <span className="ml-2 text-muted">{__('MCP Terminal')}</span>
           </div>
           <div className="navbar-right">
             <div className="indicator-label">
@@ -228,12 +211,12 @@ function App() {
       <footer className="footer">
         <div className="container">
           <p className="text-muted small text-center">
-            Press Ctrl+C to clear the terminal • Ctrl+L to clear the screen
+            Press Ctrl+C to interrupt • Ctrl+L to clear the screen
           </p>
         </div>
       </footer>
     </div>
   );
-}
+});
 
 export default App;

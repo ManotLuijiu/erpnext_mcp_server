@@ -3,7 +3,7 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { initSocket } from '../socket';
-import type { Socket } from 'socket.io-client';
+import { type Socket } from 'socket.io-client';
 import type { DefaultEventsMap } from '@socket.io/component-emitter';
 
 function Terminal() {
@@ -15,6 +15,8 @@ function Terminal() {
   const xtermRef = useRef<XTerm | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // console.log('socket Terminal2', socket);
 
   useEffect(() => {
     // Initialize xterm
@@ -42,6 +44,8 @@ function Terminal() {
 
     // Connect to socket
     const socket = initSocket();
+    // const socket = io('/ai-chatbot-client');
+    console.log('socket Terminal2', socket);
     socketRef.current = socket;
 
     // Handle socket connection events

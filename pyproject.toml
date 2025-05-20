@@ -30,7 +30,8 @@ dependencies = [
     "uvicorn",
     "ag2",
     "google-genai",
-    "mem0ai"
+    "mem0ai",
+    "python-socketio"
 ]
 
 [project.scripts]

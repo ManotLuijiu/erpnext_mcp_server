@@ -25,6 +25,8 @@ commands = [
     "erpnext_mcp_server.commands.mcp_dev.commands"
 ]
 
+socketio_namespaces = ["erpnext_mcp_server.handlers.mcp_terminal_socketio"]
+
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [

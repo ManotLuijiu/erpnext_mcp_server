@@ -26,14 +26,14 @@ export function initSocket() {
   console.log('protocol socket.js', protocol);
   console.log('url socket.js', url);
 
-  const socket = io('http://localhost:9000/socket.io', {
+  const socket = io(url, {
     withCredentials: true,
     reconnectionAttempts: 5,
     path: `/${siteName}/socket.io`,
     query: {
       terminal: true,
     },
-    transports: ['polling', 'websocket'],
+    transports: ['websocket', 'polling'],
     timeout: 20000,
     upgrade: true,
     rememberUpgrade: true,
