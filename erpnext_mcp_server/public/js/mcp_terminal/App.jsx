@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 
@@ -6,9 +6,39 @@ export default function App() {
   const terminalRef = useRef(null);
   const terminalInstanceRef = useRef(null);
   const currentLineBuffer = useRef('');
+  const [isConnected, setIsConnected] = useState(false);
 
   console.log('terminalRef', terminalRef);
   console.log('terminalInstanceRef', terminalInstanceRef);
+
+  console.log('user', frappe.session.user);
+
+  // Function to start the MCP server
+  const connectMCP = () => {
+    if (terminalInstanceRef.current) {
+      terminalInstanceRef.current.write('Connecting to MCP Server...\r\n');
+      const user = frappe.session.user;
+
+      // Call backend to start MCP process
+      frappe.call({
+        method: 'erpnext_mcp_server.handlers.socket_handlers.start_mcp_process',
+        args: { user: user },
+        callback: function (r) {
+          console.log('r', r);
+          if (r.message && r.message.success) {
+            terminalInstanceRef.current.write('MCP Server connected.\r\n');
+            setIsConnected(true);
+          } else {
+            terminalInstanceRef.current.write(
+              'Failed to connect: ' +
+                (r.message?.error || 'Unknown error') +
+                '\r\n'
+            );
+          }
+        },
+      });
+    }
+  };
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -56,8 +86,29 @@ export default function App() {
 
     // Handle terminal input
     term.onKey(({ key, domEvent }) => {
+      // If not connected, ignore input
+      if (!isConnected) {
+        if (domEvent.key === 'Enter') {
+          term.write('\r\n');
+        }
+        return;
+      }
+
       // Special key handling
       if (domEvent.key === 'Enter') {
+        // Send the command via Ajax call
+        frappe.call({
+          method:
+            'erpnext_mcp_server.handlers.socket_handlers.send_terminal_input',
+          args: {
+            command: currentLineBuffer.current,
+          },
+          callback: function (r) {
+            console.log('r', r);
+            // Response handled via realtime events
+          },
+        });
+
         // Get the current line
         // const currentLine = getCurrentLine(term);
 
@@ -71,6 +122,7 @@ export default function App() {
         // Send command to server
         frappe.realtime.emit('mcp_terminal_input', {
           command: currentLineBuffer.current,
+          user: frappe.session.user,
         });
 
         // Reset buffer and add new line
@@ -122,6 +174,13 @@ export default function App() {
   return (
     <div className="h-full w-full p-4 bg-gray-900">
       <div className="text-lg mb-4 text-white">MCP Terminal</div>
+      <button
+        className="btn btn-primary"
+        onClick={connectMCP}
+        disabled={isConnected}
+      >
+        Connect MCP
+      </button>
       <div
         ref={terminalRef}
         className="h-5/6 w-full border border-gray-700 rounded"

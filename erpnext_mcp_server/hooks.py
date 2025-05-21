@@ -186,6 +186,10 @@ doc_events = {
     }
 }
 
+on_redis_event = {
+    "mcp_terminal_input": "erpnext_mcp_server.handlers.socket_handlers.realtime_handler"
+}
+
 on_session_creation = [
     "erpnext_mcp_server.handlers.socket_handlers.init_socket_handler"
 ]
