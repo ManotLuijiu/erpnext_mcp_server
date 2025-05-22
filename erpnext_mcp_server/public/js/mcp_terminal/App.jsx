@@ -7,6 +7,7 @@ export default function App() {
   const terminalInstanceRef = useRef(null);
   const currentLineBuffer = useRef('');
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   console.log('terminalRef', terminalRef);
   console.log('terminalInstanceRef', terminalInstanceRef);
@@ -16,29 +17,86 @@ export default function App() {
   // Function to start the MCP server
   const connectMCP = () => {
     if (terminalInstanceRef.current) {
+      setIsLoading(true);
       terminalInstanceRef.current.write('Connecting to MCP Server...\r\n');
       const user = frappe.session.user;
 
       // Call backend to start MCP process
       frappe.call({
-        method: 'erpnext_mcp_server.handlers.socket_handlers.start_mcp_process',
+        method:
+          'erpnext_mcp_server.handlers.socket_handlers.start_mcp_process_api',
         args: { user: user },
         callback: function (r) {
+          setIsLoading(false);
           console.log('r', r);
           if (r.message && r.message.success) {
             terminalInstanceRef.current.write('MCP Server connected.\r\n');
             setIsConnected(true);
           } else {
+            const errorMsg = r.message?.error || 'Unknown error';
             terminalInstanceRef.current.write(
               'Failed to connect: ' +
+                errorMsg +
                 (r.message?.error || 'Unknown error') +
                 '\r\n'
+            );
+            console.error('MCP connection error: ', errorMsg);
+          }
+        },
+        error: function (err) {
+          setIsLoading(false);
+          const errorMsg = err.message || 'Unknown error';
+          terminalInstanceRef.current.write(
+            'Connection error: ' + errorMsg + '\r\n'
+          );
+          console.error('MCP connection error:', err);
+        },
+      });
+    }
+  };
+
+  // Function to disconnect from MCP server
+  const disconnectMCP = () => {
+    if (terminalInstanceRef.current) {
+      terminalInstanceRef.current.write(
+        '\r\nDisconnecting from MCP Server...\r\n'
+      );
+
+      const user = frappe.session.user;
+      console.log('user disconnectMCP', user);
+
+      frappe.call({
+        method: 'erpnext_mcp_server.handlers.socket_handlers.stop_mcp_process',
+        args: { user: user },
+        callback: function (r) {
+          if (r.message && r.message.success) {
+            terminalInstanceRef.current.write('Disconnected successfully.\r\n');
+            setIsConnected(false);
+          } else {
+            const errorMsg = r.message?.error || 'Unknown error';
+            terminalInstanceRef.current.write(
+              'Failed to disconnect: ' + errorMsg + '\r\n'
             );
           }
         },
       });
     }
   };
+
+  useEffect(() => {
+    // Debug any socket.io events
+    const handleSocketEvent = (data) => {
+      console.log('Socket.io event received:', data);
+    };
+
+    // Listen to all events (debugging)
+    frappe.realtime.socket.onAny(handleSocketEvent);
+
+    return () => {
+      // Clean up
+      frappe.realtime.socket.offAny(handleSocketEvent);
+    };
+  }, []);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -52,6 +110,8 @@ export default function App() {
         background: '#1e1e1e',
         foreground: '#f0f0f0',
       },
+      // rows: 24,
+      // cols: 80,
     });
 
     console.log('term', term);
@@ -65,11 +125,15 @@ export default function App() {
     term.write(
       'MCP Terminal Connected. Type a command and press Enter.\r\n\r\n'
     );
+    // Initial greeting
+    term.write('MCP Terminal\r\n');
+    term.write('-------------\r\n');
+    term.write('Click "Connect MCP" to start the server.\r\n\r\n');
 
     // Test socket.io
-    frappe.realtime.on('item_connector', (data) => {
-      console.log('data testing socket.io', data);
-    });
+    // frappe.realtime.on('item_connector', (data) => {
+    //   console.log('data testing socket.io', data);
+    // });
 
     // Set up socket.io connection
     frappe.realtime.on('mcp_terminal_output', (data) => {
@@ -96,18 +160,38 @@ export default function App() {
 
       // Special key handling
       if (domEvent.key === 'Enter') {
-        // Send the command via Ajax call
-        frappe.call({
-          method:
-            'erpnext_mcp_server.handlers.socket_handlers.send_terminal_input',
-          args: {
-            command: currentLineBuffer.current,
-          },
-          callback: function (r) {
-            console.log('r', r);
-            // Response handled via realtime events
-          },
-        });
+        const command = currentLineBuffer.current;
+
+        // Echo the command locally immediately
+        term.write('\r\n');
+
+        // Only send non-empty commands
+        if (command.trim()) {
+          // Send the command via Ajax call
+          frappe.call({
+            method:
+              'erpnext_mcp_server.handlers.socket_handlers.send_terminal_input',
+            args: {
+              command: command,
+            },
+            callback: function (r) {
+              if (r.message && !r.message.success) {
+                // Only show error if command sending failed
+                const errorMsg = r.message.error || 'Failed to send command';
+                term.write('\r\nError: ' + errorMsg + '\r\n');
+                console.error('Command error:', errorMsg);
+              }
+            },
+            error: function (err) {
+              term.write(
+                '\r\nError sending command: ' +
+                  (err.message || 'Unknown error') +
+                  '\r\n'
+              );
+              console.error('Command error:', err);
+            },
+          });
+        }
 
         // Get the current line
         // const currentLine = getCurrentLine(term);
@@ -115,9 +199,9 @@ export default function App() {
         // console.log('currentLine', currentLine);
 
         // Testing socket.io
-        frappe.realtime.emit('item_connector', (data) => {
-          console.log(data);
-        });
+        // frappe.realtime.emit('item_connector', (data) => {
+        //   console.log(data);
+        // });
 
         // Send command to server
         frappe.realtime.emit('mcp_terminal_input', {
@@ -169,18 +253,68 @@ export default function App() {
       }
       frappe.realtime.off('mcp_terminal_output');
     };
-  }, []);
+  }, [isConnected]);
 
   return (
     <div className="h-full w-full p-4 bg-gray-900">
-      <div className="text-lg mb-4 text-white">MCP Terminal</div>
-      <button
-        className="btn btn-primary"
-        onClick={connectMCP}
-        disabled={isConnected}
-      >
-        Connect MCP
-      </button>
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-lg mb-4 text-white">MCP Terminal</div>
+        <button
+          className={`btn ${isConnected ? 'btn-secondary' : 'btn-primary'}`}
+          onClick={
+            isConnected
+              ? () => {
+                  console.log('connected');
+                }
+              : connectMCP
+          }
+          disabled={isLoading || isConnected}
+        >
+          {isLoading
+            ? 'Connecting...'
+            : isConnected
+              ? 'Connected'
+              : 'Connect MCP'}
+        </button>
+
+        <button
+          className="btn btn-secondary"
+          onClick={disconnectMCP}
+          disabled={!isConnected}
+        >
+          Disconnect
+        </button>
+
+        <button
+          className="btn btn-success ml-2"
+          onClick={() => {
+            frappe.call({
+              method:
+                'erpnext_mcp_server.handlers.socket_handlers.test_realtime_output',
+              callback: function (r) {
+                console.log('Realtime Test:', r.message);
+              },
+            });
+          }}
+        >
+          Test Realtime
+        </button>
+
+        <button
+          className="btn btn-secondary ml-2"
+          onClick={() => {
+            frappe.call({
+              method:
+                'erpnext_mcp_server.handlers.socket_handlers.start_test_echo_process',
+              callback: function (r) {
+                console.log('Test Echo Process:', r.message);
+              },
+            });
+          }}
+        >
+          Start Echo Test
+        </button>
+      </div>
       <div
         ref={terminalRef}
         className="h-5/6 w-full border border-gray-700 rounded"
