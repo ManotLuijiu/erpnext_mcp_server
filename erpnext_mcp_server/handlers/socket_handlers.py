@@ -15,6 +15,63 @@ mcp_processes = {}  # Store processes by user
 print(f"mcp_processes {mcp_processes}")
 
 
+def send_terminal_output(site, user, message):
+    """Send terminal output directly via Redis, bypassing Frappe's realtime API"""
+    try:
+        # Import Redis-related functions
+        import json
+
+        from frappe.utils.background_jobs import get_redis_connection_without_auth
+
+        # Get Redis connection
+        redis_conn = get_redis_connection_without_auth()
+
+        # Create the message payload
+        payload = {
+            "event": "mcp_terminal_output",
+            "message": message,
+            "room": f"user:{user}",
+            "namespace": site,
+        }
+
+        # Publish to Redis events channel
+        redis_conn.publish("events", json.dumps(payload))
+
+    except Exception as e:
+        print(f"Error sending terminal output via Redis: {str(e)}")
+        traceback.print_exc()
+
+
+@frappe.whitelist()
+def test_redis_connection():
+    """Test if Redis connection is working properly"""
+    try:
+        from frappe.utils.background_jobs import get_redis_connection_without_auth
+
+        # Get Redis connection
+        redis_conn = get_redis_connection_without_auth()
+
+        # Try a simple PING
+        response = redis_conn.ping()
+
+        # Send a test message to the current user
+        user = frappe.session.user
+        site = frappe.local.site
+
+        send_terminal_output(site, user, "\r\n=== Redis Test Message ===\r\n")
+
+        return {
+            "success": True,
+            "ping_response": response,
+            "redis_info": {
+                "host": redis_conn.connection_pool.connection_kwargs.get("host"),
+                "port": redis_conn.connection_pool.connection_kwargs.get("port"),
+            },
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
 @frappe.whitelist()
 def start_test_echo_process():
     """Start a test echo process that clearly shows output"""
@@ -306,8 +363,13 @@ def send_terminal_input(command):
     """Send input to the MCP process - API method"""
     user = frappe.session.user
     print(f"send_terminal_input called by {user} with command: {command}")
+    site = frappe.local.site
+    print(f"site send_terminal_input {site}")
 
     try:
+        # Echo the command back directly via Redis
+        send_terminal_output(site, user, f"\r\n> {command}\r\n")
+
         # Echo the command back directly via realtime (for debugging)
         frappe.publish_realtime(
             "mcp_terminal_output", f"\r\n> {command}\r\n", user=user

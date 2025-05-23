@@ -314,6 +314,28 @@ export default function App() {
         >
           Start Echo Test
         </button>
+
+        <button
+          className="btn btn-info ml-2"
+          onClick={() => {
+            frappe.call({
+              method:
+                'erpnext_mcp_server.handlers.socket_handlers.test_redis_connection',
+              callback: function (r) {
+                console.log('Redis Test:', r.message);
+                if (terminalInstanceRef.current) {
+                  terminalInstanceRef.current.write(
+                    '\r\nRedis Test Results: ' +
+                      JSON.stringify(r.message, null, 2) +
+                      '\r\n'
+                  );
+                }
+              },
+            });
+          }}
+        >
+          Test Redis
+        </button>
       </div>
       <div
         ref={terminalRef}
