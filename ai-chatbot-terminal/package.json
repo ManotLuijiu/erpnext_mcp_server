@@ -1,0 +1,21 @@
+{
+  "name": "ai-chatbot-terminal",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --base=/assets/erpnext_mcp_server/ai-chatbot-terminal/ && yarn copy-html-entry",
+    "preview": "vite preview",
+    "copy-html-entry": "cp ../erpnext_mcp_server/public/ai-chatbot-terminal/index.html ../erpnext_mcp_server/www/ai-chatbot-terminal.html"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.5.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.3",
+    "vite": "^6.3.5"
+  }
+}

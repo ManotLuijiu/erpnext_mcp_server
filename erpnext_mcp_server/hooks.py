@@ -309,3 +309,5 @@ website_route_rules = [
         "to_route": "ai-chatbot-client",
     },
 ]
+
+website_route_rules = [{'from_route': '/ai-chatbot-terminal/<path:app_path>', 'to_route': 'ai-chatbot-terminal'},]
