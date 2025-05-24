@@ -2,23 +2,35 @@ import { createApp } from 'vue';
 import { createRouter, createWebHashHistory } from 'vue-router';
 import io from 'socket.io-client';
 import App from './App.vue';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+// import 'xterm/css/xterm.css';
 
 // Load xterm.js and addons
 const loadXterm = async () => {
   // Load xterm.js CSS
   const xtermCSS = document.createElement('link');
   xtermCSS.rel = 'stylesheet';
-  xtermCSS.href = '/assets/node_modules/xterm/css/xterm.css';
+  xtermCSS.href = 'node_modules/@xterm/xterm/css/xterm.css';
   document.head.appendChild(xtermCSS);
+  const containerElement = document.getElementById('xterm__container');
+  if (!containerElement) throw new Error('Terminal container not found');
+  terminal.open(containerElement);
+
+  const terminal = new Terminal();
+  const fitAddon = new FitAddon();
+  terminal.loadAddon(fitAddon);
+  terminal.open(containerElement);
+  fitAddon.fit();
 
   // Load xterm.js scripts if not already loaded
-  if (!window.Terminal) {
-    await import('/assets/node_modules/xterm/lib/xterm.js');
-  }
+  //   if (!window.Terminal) {
+  //     await import('node_modules/@xterm/xterm/lib/xterm.js');
+  //   }
 
-  if (!window.FitAddon) {
-    await import('/assets/node_modules/xterm-addon-fit/lib/xterm-addon-fit.js');
-  }
+  //   if (!window.FitAddon) {
+  //     await import('/assets/node_modules/xterm-addon-fit/lib/xterm-addon-fit.js');
+  //   }
 };
 
 // Router configuration

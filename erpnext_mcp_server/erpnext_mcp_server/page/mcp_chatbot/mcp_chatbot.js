@@ -74,12 +74,13 @@ frappe.pages['mcp-chatbot'].on_page_load = function (wrapper) {
       }
 
       // Load the MCP Terminal bundle
-      const { initMCPTerminal } = await import(
-        '/assets/erpnext_mcp_server/js/mcp_terminal/mcp_terminal.bundle.js'
-      );
+      //   const { initMCPTerminal } = await import(
+      //     '/assets/erpnext_mcp_server/js/mcp_terminal/mcp_terminal.bundle.js'
+      //   );
 
       // Initialize the terminal
-      await initMCPTerminal('mcp-terminal-app');
+      //   await initMCPTerminal('mcp-terminal-app');
+      console.log('initMCPTerminal');
     } catch (error) {
       console.error('Failed to initialize MCP Terminal:', error);
 

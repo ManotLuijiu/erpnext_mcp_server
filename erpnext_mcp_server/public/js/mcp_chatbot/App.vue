@@ -1,6 +1,6 @@
 <template>
   <div class="mcp-terminal-app">
-    <div class="terminal-container">
+    <div id="xterm__container" class="terminal-container">
       <div class="terminal-header">
         <h3>🚀 ERPNext MCP Terminal</h3>
         <div class="terminal-status">
