@@ -1,644 +1,494 @@
-import json
-import os
-from datetime import datetime
-from pathlib import Path
+"""ERPNext MCP Server using low-level implementation"""
+
+import asyncio
+import logging
+import sys
+from collections.abc import AsyncIterable
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator, Dict, List
 
 import frappe
-from mcp.server.fastmcp import Context, FastMCP
-from mcp.server.fastmcp.utilities.types import Image
-from mcp.types import TextContent, Annotations
+import mcp.server.stdio
+import mcp.types as types
+from mcp.server.lowlevel import NotificationOptions, Server
+from mcp.server.models import InitializationOptions
 
-# Initialize the MCP server with a name and instructions
-server = FastMCP(
-    name="ERPNext MCP Server",
-    instructions="""
-    This server provides tools to automate and interact with ERPNext.
-    Available functionality:
-    - Query documents (read-only)
-    - File operations
-    - Export/import data
-    - Generate reports
-    - Access translations
-    """,
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+logger = logging.getLogger(__name__)
 
-# --- DOCUMENT TOOLS ---
+
+class ERPNextContext:
+    """Context for ERPNext operations."""
+
+    def __init__(self) -> None:
+        self.initialized = False
+        self.site = None
+
+    async def connect(self):
+        """Initialize Frappe connection."""
+        try:
+            if not frappe.db:
+                frappe.init_site()
+                frappe.connect()
+
+            self.site = frappe.local.site
+            self.initialized = True
+            logger.info(f"Connected to ERPNext site: {self.site}")
+
+        except Exception as e:
+            logger.error(f"Failed to connect to ERPNext; {e}")
+            raise
+
+    async def disconnect(self):
+        """Clean up Frappe connection."""
+        try:
+            if frappe.db:
+                frappe.db.close()
+            logger.info("Disconnected from ERPNext")
+        except Exception as e:
+            logger.error(f"Error disconnecting: {e}")
 
 
-@server.tool(
-    description="Get a document from the database",
-    annotations=Annotations(readOnlyHint=True),
-)
-async def get_document(doctype: str, name: str, ctx: Context = None) -> dict:
-    """Retrieve a document from ERPNext by doctype and name.
+@asynccontextmanager
+async def server_lifespan(server: Server) -> AsyncIterator[Dict[str, Any]]:
+    """Manage server startup and shutdown lifecycle."""
+    logger.info("Starting ERPNext MCP Server...")
 
-    Args:
-        doctype: The DocType to retrieve (e.g., Customer, Item, Sales Invoice)
-        name: The name of the document to retrieve
+    # Initialize ERPNext context
+    erpnext_ctx = ERPNextContext()
+    await erpnext_ctx.connect()
 
-    Returns:
-        Document data as a dictionary
-    """
     try:
-        await ctx.info(f"Retrieving {doctype}: {name}")
+        yield {"erpnext": erpnext_ctx}
+    finally:
+        # Clean up on shutdown
+        await erpnext_ctx.disconnect()
+        logger.info("ERPNext MCP Server stopped")
+
+
+# Create server with lifespan management
+server = Server("erpnext-mcp-server", lifespan=server_lifespan)
+
+
+@server.list_tools()
+async def handle_list_tools() -> list[types.Tool]:
+    """List available tools."""
+    return [
+        types.Tool(
+            name="list_doctypes",
+            description="List all available doctypes in ERPNext",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        types.Tool(
+            name="get_document",
+            description="Get a specific document from ERPNext",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "doctype": {"type": "string", "description": "Document type name"},
+                    "name": {"type": "string", "description": "Document name/ID"},
+                },
+                "required": ["doctype", "name"],
+            },
+        ),
+        types.Tool(
+            name="search_documents",
+            description="Search documents in ERPNext",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "doctype": {
+                        "type": "string",
+                        "description": "Document type to search",
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Search query",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results",
+                        "default": 20,
+                    },
+                },
+                "required": ["doctype", "query"],
+            },
+        ),
+        types.Tool(
+            name="create_document",
+            description="Create a new document in ERPNext",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "doctype": {
+                        "type": "string",
+                        "description": "Document type to create",
+                    },
+                    "data": {
+                        "type": "object",
+                        "description": "Document data as JSON object",
+                    },
+                },
+                "required": ["doctype", "data"],
+            },
+        ),
+        types.Tool(
+            name="update_document",
+            description="Update an existing document in ERPNext",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "doctype": {"type": "string", "description": "Document type"},
+                    "name": {"type": "string", "description": "Document name/ID"},
+                    "data": {"type": "object", "description": "Updated document data"},
+                },
+                "required": ["doctype", "name", "data"],
+            },
+        ),
+        types.Tool(
+            name="execute_sql",
+            description="Execute read-only SQL query on ERPNext database",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "SQL SELECT query"}
+                },
+                "required": ["query"],
+            },
+        ),
+        types.Tool(
+            name="get_system_info",
+            description="Get ERPNext system information",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        types.Tool(
+            name="bench_command",
+            description="Execute safe bench commands",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "Bench command to execute (status, version, migrate, etc.)",
+                    }
+                },
+                "required": ["command"],
+            },
+        ),
+    ]
+
+
+@server.call_tool()
+async def handle_call_tool(
+    name: str, arguments: dict
+) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+    """Handle tool execution."""
+    ctx = server.request_context
+    erpnext_ctx = ctx.lifespan_context["erpnext"]
+
+    if not erpnext_ctx.initialized:
+        return [types.TextContent(type="text", text="Error: ERPNext not initialized")]
+
+    try:
+        result = await execute_tool(name, arguments)
+        return [types.TextContent(type="text", text=result)]
+
+    except Exception as e:
+        logger.error(f"Tool {name} failed: {e}")
+        return [types.TextContent(type="text", text=f"Error: {str(e)}")]
+
+
+async def execute_tool(name: str, arguments: dict) -> str:
+    """Execute the requested tool."""
+    if name == "list_doctypes":
+        return await list_doctypes()
+
+    elif name == "get_document":
+        doctype = arguments["doctype"]
+        doc_name = arguments["name"]
+        return await get_document(doctype, doc_name)
+
+    elif name == "search_documents":
+        doctype = arguments["doctype"]
+        query = arguments["query"]
+        limit = arguments.get("limit", 20)
+        return await search_documents(doctype, query, limit)
+
+    elif name == "create_document":
+        doctype = arguments["doctype"]
+        data = arguments["data"]
+        return await create_document(doctype, data)
+
+    elif name == "update_document":
+        doctype = arguments["doctype"]
+        doc_name = arguments["name"]
+        data = arguments["data"]
+        return await update_document(doctype, doc_name, data)
+
+    elif name == "execute_sql":
+        query = arguments["query"]
+        return await execute_sql_query(query)
+
+    elif name == "get_system_info":
+        return await get_system_info()
+
+    elif name == "bench_command":
+        command = arguments["command"]
+        return await execute_bench_command(command)
+
+    else:
+        raise ValueError(f"Unknown tool: {name}")
+
+
+# Tool implementations
+async def list_doctypes() -> str:
+    """List all doctypes."""
+    try:
+        doctypes = frappe.get_all(
+            "DocType",
+            fields=["name", "module", "is_custom", "description"],
+            filters={"istable": 0},
+            order_by="name",
+        )
+        result = "📋 Available DocTypes:\n\n"
+        for dt in doctypes:
+            icon = "🔧" if dt.get("is_custom") else "📄"
+            result += f"{icon} {dt['name']} ({dt.get('module', 'Unknown')})\n"
+            if dt.get("description"):
+                result += f"   {dt['description']}\n"
+
+        return result
+
+    except Exception as e:
+        raise Exception(f"Failed to list doctypes: {e}")
+
+
+async def get_document(doctype: str, name: str) -> str:
+    """Get a specific document."""
+    try:
         doc = frappe.get_doc(doctype, name)
-        return doc.as_dict()
-    except Exception as e:
-        await ctx.error(f"Error retrieving document: {e}")
-        return {"error": str(e)}
+        doc_dict = doc.as_dict()
 
+        result = f"📄 Document: {doctype} - {name}\n\n"
 
-@server.tool(
-    description="Query documents from the database with filters",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def query_documents(
-    doctype: str,
-    filters: str = "{}",
-    fields: str = "*",
-    limit: int = 20,
-    ctx: Context = None,
-) -> list:
-    """Query documents from the database with filters.
-
-    Args:
-        doctype: The DocType to query (e.g., Customer, Item, Sales Invoice)
-        filters: JSON string of filters in the format: {"field1": "value1", "field2": [">=", "value2"]}
-        fields: Comma-separated list of fields or "*" for all fields
-        limit: Maximum number of records to return
-
-    Returns:
-        List of document data matching the query
-    """
-    try:
-        await ctx.info(f"Querying {doctype} with filters: {filters}")
-
-        # Parse filters if provided as a string
-        if isinstance(filters, str):
-            filters_dict = json.loads(filters)
-        else:
-            filters_dict = filters
-
-        # Handle fields
-        field_list = fields
-        if isinstance(fields, str) and "," in fields:
-            field_list = [f.strip() for f in fields.split(",")]
-
-        result = frappe.get_all(
-            doctype, filters=filters_dict, fields=field_list, limit_page_length=limit
-        )
-
-        await ctx.info(f"Found {len(result)} records")
-        return result
-    except Exception as e:
-        await ctx.error(f"Error querying documents: {e}")
-        return {"error": str(e)}
-
-
-@server.tool(
-    description="Count documents matching filters",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def count_documents(
-    doctype: str, filters: str = "{}", ctx: Context = None
-) -> dict:
-    """Count documents matching specified filters.
-
-    Args:
-        doctype: The DocType to count
-        filters: JSON string of filters
-
-    Returns:
-        Dictionary with count of matching documents
-    """
-    try:
-        # Parse filters if provided as a string
-        if isinstance(filters, str):
-            filters_dict = json.loads(filters)
-        else:
-            filters_dict = filters
-
-        count = frappe.db.count(doctype, filters_dict)
-        return {"doctype": doctype, "count": count}
-    except Exception as e:
-        await ctx.error(f"Error counting documents: {e}")
-        return {"error": str(e)}
-
-
-# --- FILE TOOLS ---
-
-
-@server.tool(
-    description="List files in a directory",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def list_files(path: str = ".", ctx: Context = None) -> list:
-    """List files in a specified directory.
-
-    Args:
-        path: Relative path from the site directory
-
-    Returns:
-        List of files with metadata
-    """
-    try:
-        site_path = frappe.get_site_path()
-        target_path = os.path.join(site_path, path)
-
-        if not os.path.exists(target_path):
-            await ctx.error(f"Path does not exist: {target_path}")
-            return {"error": f"Path does not exist: {path}"}
-
-        await ctx.info(f"Listing files in {target_path}")
-
-        files = []
-        for item in os.listdir(target_path):
-            item_path = os.path.join(target_path, item)
-            files.append(
-                {
-                    "name": item,
-                    "path": os.path.relpath(item_path, site_path),
-                    "is_dir": os.path.isdir(item_path),
-                    "size": (
-                        os.path.getsize(item_path)
-                        if not os.path.isdir(item_path)
-                        else 0
-                    ),
-                    "modified": datetime.fromtimestamp(
-                        os.path.getmtime(item_path)
-                    ).isoformat(),
-                }
-            )
-
-        return files
-    except Exception as e:
-        await ctx.error(f"Error listing files: {e}")
-        return {"error": str(e)}
-
-
-@server.tool(
-    description="Read file contents", annotations=ToolAnnotations(readOnlyHint=True)
-)
-async def read_file(path: str, ctx: Context = None) -> dict:
-    """Read a file's contents.
-
-    Args:
-        path: Relative path from the site directory
-
-    Returns:
-        File contents as text or base64 encoded for binary files
-    """
-    try:
-        site_path = frappe.get_site_path()
-        file_path = os.path.join(site_path, path)
-
-        if not os.path.exists(file_path) or os.path.isdir(file_path):
-            await ctx.error(f"File does not exist: {file_path}")
-            return {"error": f"File does not exist: {path}"}
-
-        # Get file extension to determine if it's a text file
-        _, ext = os.path.splitext(file_path)
-        text_extensions = [
-            ".txt",
-            ".csv",
-            ".md",
-            ".json",
-            ".py",
-            ".js",
-            ".html",
-            ".css",
-            ".xml",
-            ".log",
+        # Show key fields first
+        key_fields = [
+            "name",
+            "title",
+            "subject",
+            "customer",
+            "supplier",
+            "item_code",
+            "status",
         ]
+        shown_fields = set()
 
-        is_text = ext.lower() in text_extensions
+        for field in key_fields:
+            if field in doc_dict and doc_dict[field]:
+                result += f"{field}: {doc_dict[field]}\n"
+                shown_fields.add(field)
 
-        await ctx.info(f"Reading file: {path}")
-
-        if is_text:
-            # Read as text
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-            return {"path": path, "is_text": True, "content": content}
-        else:
-            # Read as binary and convert to base64
-            import base64
-
-            with open(file_path, "rb") as f:
-                content = base64.b64encode(f.read()).decode("utf-8")
-            return {
-                "path": path,
-                "is_text": False,
-                "content": content,
-                "encoding": "base64",
-            }
-    except Exception as e:
-        await ctx.error(f"Error reading file: {e}")
-        return {"error": str(e)}
-
-
-# --- TRANSLATION TOOLS ---
-
-
-@server.tool(
-    description="Get a translation for a string",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def get_translation(
-    source_text: str, language: str = None, ctx: Context = None
-) -> dict:
-    """Get the translation for a text string.
-
-    Args:
-        source_text: The text to translate
-        language: Target language code (e.g., 'th' for Thai)
-
-    Returns:
-        Translation information
-    """
-    try:
-        await ctx.info(f"Getting translation for: {source_text}")
-
-        if not language:
-            # Get user's language preference
-            language = frappe.local.lang or frappe.db.get_default("lang") or "en"
-
-        # Check if translation exists
-        translation = None
-        if language != "en":
-            translation = frappe.db.get_value(
-                "Translation",
-                {"source_text": source_text, "language": language},
-                ["name", "translated_text"],
-            )
-
-        return {
-            "source_text": source_text,
-            "language": language,
-            "translated_text": translation[1] if translation else source_text,
-            "exists": bool(translation),
-        }
-    except Exception as e:
-        await ctx.error(f"Error getting translation: {e}")
-        return {"error": str(e)}
-
-
-@server.tool(
-    description="Search for translations",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def search_translations(
-    search_text: str,
-    language: str = None,
-    search_in: str = "both",
-    limit: int = 10,
-    ctx: Context = None,
-) -> list:
-    """Search for translations containing the specified text.
-
-    Args:
-        search_text: Text to search for
-        language: Language code to filter by
-        search_in: Where to search - 'source', 'translated', or 'both'
-        limit: Maximum number of results to return
-
-    Returns:
-        List of matching translations
-    """
-    try:
-        await ctx.info(f"Searching translations for: {search_text}")
-
-        if not language:
-            # Get user's language preference
-            language = frappe.local.lang or frappe.db.get_default("lang") or "en"
-
-        filters = {"language": language}
-        or_filters = {}
-
-        if search_in == "source" or search_in == "both":
-            or_filters["source_text"] = ["like", f"%{search_text}%"]
-
-        if search_in == "translated" or search_in == "both":
-            or_filters["translated_text"] = ["like", f"%{search_text}%"]
-
-        translations = frappe.get_all(
-            "Translation",
-            filters=filters,
-            or_filters=or_filters,
-            fields=["name", "source_text", "translated_text", "language"],
-            limit=limit,
-        )
-
-        await ctx.info(f"Found {len(translations)} matches")
-        return translations
-    except Exception as e:
-        await ctx.error(f"Error searching translations: {e}")
-        return {"error": str(e)}
-
-
-# --- REPORT TOOLS ---
-
-
-@server.tool(
-    description="Generate a script report",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def run_report(
-    report_name: str, filters: str = "{}", ctx: Context = None
-) -> dict:
-    """Run a script report with the specified filters.
-
-    Args:
-        report_name: Name of the report to run
-        filters: JSON string of filters to apply
-
-    Returns:
-        Report results
-    """
-    try:
-        await ctx.info(f"Running report: {report_name}")
-
-        # Parse filters if provided as a string
-        if isinstance(filters, str):
-            filters_dict = json.loads(filters)
-        else:
-            filters_dict = filters
-
-        # Get report doc
-        report = frappe.get_doc("Report", report_name)
-
-        if report.report_type != "Script Report":
-            await ctx.warning(
-                f"Only Script Reports are supported. {report_name} is a {report.report_type}."
-            )
-            return {
-                "error": f"Only Script Reports are supported. {report_name} is a {report.report_type}."
-            }
-
-        # Run the report
-        result = report.execute_script_report(filters_dict)
-
-        # Format result
-        columns = result[0]
-        data = result[1]
-
-        return {
-            "report_name": report_name,
-            "columns": columns,
-            "data": data,
-            "filters": filters_dict,
-        }
-    except Exception as e:
-        await ctx.error(f"Error running report: {e}")
-        return {"error": str(e)}
-
-
-# --- SYSTEM TOOLS ---
-
-
-@server.tool(
-    description="Get system information", annotations=ToolAnnotations(readOnlyHint=True)
-)
-async def get_system_info(ctx: Context = None) -> dict:
-    """Get basic system information.
-
-    Returns:
-        System information including version, site name, etc.
-    """
-    try:
-        await ctx.info("Retrieving system information")
-
-        import frappe.utils
-
-        return {
-            "frappe_version": frappe.__version__,
-            "site_name": frappe.local.site,
-            "installed_apps": frappe.get_installed_apps(),
-            "user": frappe.session.user,
-            "system_settings": {
-                "time_zone": frappe.db.get_default("time_zone"),
-                "language": frappe.db.get_default("lang"),
-                "date_format": frappe.db.get_default("date_format"),
-            },
-        }
-    except Exception as e:
-        await ctx.error(f"Error getting system info: {e}")
-        return {"error": str(e)}
-
-
-@server.tool(
-    description="Execute a database query (read-only)",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def execute_query(query: str, values: str = None, ctx: Context = None) -> list:
-    """Execute a read-only SQL query.
-
-    For security reasons, only SELECT statements are allowed.
-
-    Args:
-        query: SQL query to execute (SELECT only)
-        values: JSON array of parameter values if using parameterized queries
-
-    Returns:
-        Query results
-    """
-    try:
-        # Enforce SELECT-only
-        query = query.strip()
-        if not query.lower().startswith("select "):
-            await ctx.error("Only SELECT queries are allowed for security reasons")
-            return {"error": "Only SELECT queries are allowed"}
-
-        # Parse values if provided as a string
-        if values and isinstance(values, str):
-            values_list = json.loads(values)
-        else:
-            values_list = values
-
-        await ctx.info(f"Executing query: {query}")
-
-        # Execute the query
-        result = frappe.db.sql(query, values=values_list, as_dict=True)
-
-        await ctx.info(f"Query returned {len(result)} rows")
+        result += "\n--- All Fields ---\n"
+        for field, value in doc_dict.items():
+            if field not in shown_fields and not field.startswith("_"):
+                if isinstance(value, (str, int, float)):
+                    result += f"{field}: {value}\n"
+                elif isinstance(value, list) and value:
+                    result += f"{field}: [{len(value)} items]\n"
         return result
     except Exception as e:
-        await ctx.error(f"Error executing query: {e}")
-        return {"error": str(e)}
+        raise Exception(f"Failed to get document {doctype}/{name}: {e}")
 
 
-# --- TRANSLATION TOOLS SPECIFIC FEATURES ---
-
-
-@server.tool(
-    description="Search for translations in translation_tools",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def search_translation_tools(
-    search_text: str, language_code: str = "th", ctx: Context = None
-) -> list:
-    """Search for translations in the translation_tools app.
-
-    Args:
-        search_text: Text to search for
-        language_code: Language code (default: th for Thai)
-
-    Returns:
-        List of matching translations
-    """
+async def search_documents(doctype: str, query: str, limit: int = 20) -> str:
+    """Search documents."""
     try:
-        await ctx.info(f"Searching translation_tools for: {search_text}")
-
-        # Check if translation_tools is installed
-        if "translation_tools" not in frappe.get_installed_apps():
-            await ctx.error("The translation_tools app is not installed")
-            return {"error": "The translation_tools app is not installed"}
-
-        # Query the Translation doctype or custom table depending on implementation
-        # This is a placeholder - adjust based on actual translation_tools schema
-        translations = frappe.get_all(
-            "Translation",
-            filters={
-                "language": language_code,
-                "source_text": ["like", f"%{search_text}%"],
-            },
-            fields=["name", "source_text", "translated_text", "language"],
-            limit=20,
-        )
-
-        await ctx.info(f"Found {len(translations)} matches")
-        return translations
-    except Exception as e:
-        await ctx.error(f"Error searching translations: {e}")
-        return {"error": str(e)}
-
-
-@server.tool(
-    description="Get translation statistics",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def get_translation_stats(language_code: str = "th", ctx: Context = None) -> dict:
-    """Get translation statistics for the specified language.
-
-    Args:
-        language_code: Language code (default: th for Thai)
-
-    Returns:
-        Statistics about translations
-    """
-    try:
-        await ctx.info(f"Getting translation statistics for language: {language_code}")
-
-        # Check if translation_tools is installed
-        if "translation_tools" not in frappe.get_installed_apps():
-            await ctx.error("The translation_tools app is not installed")
-            return {"error": "The translation_tools app is not installed"}
-
-        # Get total translations
-        total = frappe.db.count("Translation", {"language": language_code})
-
-        # Get counts of translations with missing translated_text
-        missing = frappe.db.count(
-            "Translation",
-            {"language": language_code, "translated_text": ["in", ["", None]]},
-        )
-
-        # Get count of recently added translations
-        import datetime
-
-        thirty_days_ago = datetime.datetime.now() - datetime.timedelta(days=30)
-        recent = frappe.db.count(
-            "Translation",
-            {
-                "language": language_code,
-                "creation": [">", thirty_days_ago.strftime("%Y-%m-%d")],
-            },
-        )
-
-        return {
-            "language": language_code,
-            "total_translations": total,
-            "missing_translations": missing,
-            "completion_percentage": (
-                round((total - missing) / total * 100, 2) if total > 0 else 0
-            ),
-            "recently_added": recent,
-        }
-    except Exception as e:
-        await ctx.error(f"Error getting translation stats: {e}")
-        return {"error": str(e)}
-
-
-@server.tool(
-    description="Get chat room information",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def get_chat_rooms(limit: int = 10, ctx: Context = None) -> list:
-    """Get information about chat rooms from translation_tools.
-
-    Args:
-        limit: Maximum number of rooms to return
-
-    Returns:
-        List of chat rooms
-    """
-    try:
-        await ctx.info("Getting chat room information")
-
-        # Check if translation_tools is installed
-        if "translation_tools" not in frappe.get_installed_apps():
-            await ctx.error("The translation_tools app is not installed")
-            return {"error": "The translation_tools app is not installed"}
-
-        # Query chat rooms - adjust fields based on actual schema
-        rooms = frappe.get_all(
-            "Chat Room",  # Adjust doctype name as needed
-            fields=["name", "room_name", "type", "modified", "creation"],
+        results = frappe.get_all(
+            doctype,
+            filters=[["name", "like", f"%{query}%"]],
+            fields=["name", "modified"],
+            limit=limit,
             order_by="modified desc",
-            limit=limit,
         )
 
-        return rooms
+        if not results:
+            return f"🔍 No results found for '{query}' in {doctype}"
+
+        result = f"🔍 Search Results for '{query}' in {doctype}:\n\n"
+        for i, doc in enumerate(results, 1):
+            result += (
+                f"{i}. {doc['name']} (Modified: {doc.get('modified', 'Unknown')})\n"
+            )
+
+        return result
+
     except Exception as e:
-        await ctx.error(f"Error getting chat rooms: {e}")
-        return {"error": str(e)}
+        raise Exception(f"Failed to search {doctype}: {e}")
 
 
-@server.tool(
-    description="Get chat messages from a room",
-    annotations=ToolAnnotations(readOnlyHint=True),
-)
-async def get_chat_messages(room: str, limit: int = 20, ctx: Context = None) -> list:
-    """Get messages from a specific chat room.
-
-    Args:
-        room: Name of the chat room
-        limit: Maximum number of messages to return
-
-    Returns:
-        List of messages from the room
-    """
+async def create_document(doctype: str, data: dict) -> str:
+    """Create a new document."""
     try:
-        await ctx.info(f"Getting messages for chat room: {room}")
+        if not isinstance(data, dict):
+            raise ValueError("The 'data' argument must be a dictionary.")
+        doc = frappe.get_doc({"doctype": doctype, **data})
+        doc.insert()
+        frappe.db.commit()
 
-        # Check if translation_tools is installed
-        if "translation_tools" not in frappe.get_installed_apps():
-            await ctx.error("The translation_tools app is not installed")
-            return {"error": "The translation_tools app is not installed"}
+        return f"✅ Created {doctype}: {doc.name}"
 
-        # Query chat messages - adjust fields based on actual schema
-        messages = frappe.get_all(
-            "Chat Message",  # Adjust doctype name as needed
-            filters={"room": room},
-            fields=["name", "room", "content", "sender", "creation"],
-            order_by="creation desc",
-            limit=limit,
+    except Exception as e:
+        raise Exception(f"Failed to create {doctype}: {e}")
+
+
+async def update_document(doctype: str, name: str, data: dict) -> str:
+    """Update an existing document."""
+    try:
+        doc = frappe.get_doc(doctype, name)
+        doc.update(data)
+        doc.save()
+        frappe.db.commit()
+
+        return f"✅ Updated {doctype}: {name}"
+
+    except Exception as e:
+        raise Exception(f"Failed to update {doctype}/{name}: {e}")
+
+
+async def execute_sql_query(query: str) -> str:
+    """Execute SQL query."""
+    try:
+        # Security check
+        if not query.strip().upper().startswith("SELECT"):
+            raise Exception("Only SELECT queries are allowed for security")
+
+        results = list(frappe.db.sql(query, as_dict=True))
+
+        if not results:
+            return "📊 Query executed successfully - No results"
+
+        result = f"📊 Query Results ({len(results)} rows):\n\n"
+
+        # Show first few rows in formatted way
+        for i, row in enumerate(results[:10]):
+            result += f"Row {i + 1}:\n"
+            if isinstance(row, dict):
+                for key, value in row.items():
+                    result += f" {key}: {value}\n"
+            elif isinstance(row, (list, tuple)):
+                for idx, value in enumerate(row):
+                    result += f" {idx}: {value}\n"
+            else:
+                result += f" {row}\n"
+            result += "\n"
+
+        if len(results) > 10:
+            result += f"... and {len(results) - 10} more rows\n"
+
+        return result
+    except Exception as e:
+        raise Exception(f"SQL query failed: {e}")
+
+
+async def get_system_info() -> str:
+    """Get system information."""
+    try:
+        info = {
+            "site": frappe.local.site,
+            "frappe_version": frappe.__version__,
+            "apps": frappe.get_installed_apps(),
+            "db_name": frappe.conf.db_name,
+            "current_user": getattr(frappe.session, "user", "Unknown"),
+        }
+
+        result = "🖥️ ERPNext System Information:\n\n"
+        result += f"Site: {info['site']}\n"
+        result += f"Frappe Version: {info['frappe_version']}\n"
+        result += f"Database: {info['db_name']}\n"
+        result += f"Current User: {info['current_user']}\n"
+        result += f"\nInstalled Apps ({len(info['apps'])}):\n"
+
+        for app in info["apps"]:
+            result += f"  • {app}\n"
+
+        return result
+
+    except Exception as e:
+        raise Exception(f"Failed to get system info: {e}")
+
+
+async def execute_bench_command(command: str) -> str:
+    """Execute bench command."""
+    import subprocess
+
+    try:
+        # Security: only allow safe commands
+        safe_commands = ["status", "version", "migrate", "list", "restart"]
+        cmd_parts = command.split()
+
+        if not cmd_parts or cmd_parts[0] not in safe_commands:
+            raise Exception(f"Command not allowed. Safe commands: {safe_commands}")
+
+        # Execute command
+        result = subprocess.run(
+            ["bench"] + cmd_parts,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=frappe.get_site_path(".."),
         )
 
-        # Reverse to get messages in chronological order
-        messages.reverse()
+        output = f"🔧 Bench Command: {command}\n\n"
 
-        return messages
+        if result.returncode == 0:
+            output += f"✅ Success:\n{result.stdout}"
+        else:
+            output += f"❌ Failed (code {result.returncode}):\n{result.stderr}"
+
+        return output
+
+    except subprocess.TimeoutExpired:
+        raise Exception("Command timed out after 30 seconds")
     except Exception as e:
-        await ctx.error(f"Error getting chat messages: {e}")
-        return {"error": str(e)}
+        raise Exception(f"Bench command failed: {e}")
+
+
+async def run_server():
+    """Run the MCP server."""
+    try:
+        async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+            await server.run(
+                read_stream,
+                write_stream,
+                InitializationOptions(
+                    server_name="ERPNext MCP Server",
+                    server_version="1.0.0",
+                    capabilities=server.get_capabilities(
+                        notification_options=NotificationOptions(),
+                        experimental_capabilities={},
+                    ),
+                ),
+            )
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user")
+    except Exception as e:
+        logger.error(f"Server error: {e}")
+        raise
+
+
+def main():
+    """Entry point."""
+    try:
+        asyncio.run(run_server())
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

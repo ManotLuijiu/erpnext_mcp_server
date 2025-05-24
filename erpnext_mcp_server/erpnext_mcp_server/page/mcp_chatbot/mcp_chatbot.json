@@ -1,0 +1,19 @@
+{
+ "content": null,
+ "creation": "2025-05-24 22:52:14.725385",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2025-05-24 22:52:14.725385",
+ "modified_by": "Administrator",
+ "module": "ERPNext MCP Server",
+ "name": "mcp-chatbot",
+ "owner": "Administrator",
+ "page_name": "mcp-chatbot",
+ "roles": [],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "mcp-chatbot"
+}

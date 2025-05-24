@@ -1,4 +1,5 @@
-import './mcp_terminal/socketio_client';
+// import './mcp_terminal/socketio_client';
+import './mcp_terminal';
 frappe.provide('frappe.chat_mcp');
 
 /**

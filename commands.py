@@ -1,4 +1,3 @@
-# erpnext_mcp_server/commands.py
 import json
 import os
 import subprocess

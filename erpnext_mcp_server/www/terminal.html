@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ERPNext MCP Terminal</title>
+    <link rel="stylesheet" href="/assets/node_modules/xterm/css/xterm.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: #1e1e1e;
+        font-family: 'Monaco', 'Menlo', monospace;
+        overflow: hidden;
+      }
+
+      .terminal-container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .terminal-header {
+        background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
+        color: white;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #444;
+        flex-shrink: 0;
+      }
+
+      .terminal-header h3 {
+        margin: 0;
+        color: #4caf50;
+        font-size: 18px;
+      }
+
+      .terminal-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: #bbb;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #f44336;
+      }
+
+      .status-dot.connected {
+        background: #4caf50;
+      }
+
+      .terminal-body {
+        flex: 1;
+        padding: 10px;
+        background: #1e1e1e;
+        overflow: hidden;
+      }
+
+      #terminal {
+        height: 100%;
+        width: 100%;
+      }
+
+      .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        color: #fff;
+        font-size: 16px;
+      }
+
+      .loading::after {
+        content: '...';
+        animation: dots 1.5s infinite;
+      }
+
+      @keyframes dots {
+        0%,
+        20% {
+          content: '.';
+        }
+        40% {
+          content: '..';
+        }
+        60%,
+        100% {
+          content: '...';
+        }
+      }
+
+      /* Mobile responsiveness */
+      @media (max-width: 768px) {
+        .terminal-header {
+          padding: 8px 12px;
+        }
+
+        .terminal-header h3 {
+          font-size: 16px;
+        }
+
+        .terminal-status {
+          font-size: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="terminal-container">
+      <div class="terminal-header">
+        <h3>🚀 ERPNext MCP Terminal</h3>
+        <div class="terminal-status">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Disconnected</span>
+          <span>|</span>
+          <span id="userInfo">Loading...</span>
+        </div>
+      </div>
+      <div class="terminal-body">
+        <div id="terminal"></div>
+        <div id="loading" class="loading" style="display: none">
+          Initializing Terminal
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/assets/frappe/js/lib/jquery/jquery.min.js"></script>
+    <script src="/assets/frappe/js/frappe.min.js"></script>
+    <script src="/assets/node_modules/xterm/lib/xterm.js"></script>
+    <script src="/assets/node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+    <script src="/assets/erpnext_mcp_server/js/mcp_terminal.js"></script>
+
+    <script>
+      let terminal;
+
+      // Wait for Frappe to be ready
+      frappe.ready(() => {
+        // Update user info
+        const userInfo = document.getElementById('userInfo');
+        const user = frappe.session.user || 'Guest';
+        const site = frappe.boot.sitename || 'ERPNext';
+        userInfo.textContent = `${user}@${site}`;
+
+        // Initialize terminal
+        terminal = new MCPTerminal('terminal');
+
+        // Update status indicators based on connection
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+
+        // Listen for connection status changes
+        frappe.realtime.on('mcp_session_started', () => {
+          statusDot.classList.add('connected');
+          statusText.textContent = 'Connected';
+        });
+
+        frappe.realtime.on('mcp_session_ended', () => {
+          statusDot.classList.remove('connected');
+          statusText.textContent = 'Disconnected';
+        });
+      });
+
+      // Handle page unload
+      window.addEventListener('beforeunload', () => {
+        if (terminal) {
+          terminal.destroy();
+        }
+      });
+
+      // Handle page visibility changes
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          // Page hidden - could pause updates
+        } else {
+          // Page visible - resume updates
+          if (terminal && terminal.fitAddon) {
+            terminal.fitAddon.fit();
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
