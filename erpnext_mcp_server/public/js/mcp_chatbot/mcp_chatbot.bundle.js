@@ -1,36 +1,84 @@
 import { createApp } from 'vue';
 import { createRouter, createWebHashHistory } from 'vue-router';
-import { io } from 'socket.io-client';
+import io from 'socket.io-client';
 import App from './App.vue';
 
-class McpChatbot {
-  constructor({ page, wrapper }) {
-    this.$wrapper = $(wrapper);
-    this.page = page;
+// Load xterm.js and addons
+const loadXterm = async () => {
+  // Load xterm.js CSS
+  const xtermCSS = document.createElement('link');
+  xtermCSS.rel = 'stylesheet';
+  xtermCSS.href = '/assets/node_modules/xterm/css/xterm.css';
+  document.head.appendChild(xtermCSS);
 
-    this.init();
+  // Load xterm.js scripts if not already loaded
+  if (!window.Terminal) {
+    await import('/assets/node_modules/xterm/lib/xterm.js');
   }
 
-  init() {
-    this.setup_page_actions();
-    this.setup_app();
+  if (!window.FitAddon) {
+    await import('/assets/node_modules/xterm-addon-fit/lib/xterm-addon-fit.js');
   }
+};
 
-  setup_page_actions() {
-    // setup page actions
-    this.primary_btn = this.page.set_primary_action(__('Print Message'), () =>
-      frappe.msgprint('Hello My Page!')
-    );
+// Router configuration
+const router = createRouter({
+  history: createWebHashHistory(),
+  routes: [
+    {
+      path: '/',
+      name: 'Terminal',
+      component: App,
+    },
+  ],
+});
+
+// Initialize the application
+export const initMCPTerminal = async (containerId) => {
+  try {
+    // Load xterm.js dependencies
+    await loadXterm();
+
+    // Create Vue app
+    const app = createApp(App);
+
+    // Use router
+    app.use(router);
+
+    // Global properties
+    app.config.globalProperties.$frappe = window.frappe;
+    app.config.globalProperties.$io = io;
+
+    // Error handler
+    app.config.errorHandler = (err, vm, info) => {
+      console.error('Vue Error:', err);
+      console.error('Component:', vm);
+      console.error('Info:', info);
+    };
+
+    // Mount the app
+    const container = document.getElementById(containerId);
+    if (!container) {
+      throw new Error(`Container with ID '${containerId}' not found`);
+    }
+
+    app.mount(container);
+
+    console.log('MCP Terminal Vue app initialized successfully');
+    return app;
+  } catch (error) {
+    console.error('Failed to initialize MCP Terminal:', error);
+    throw error;
   }
+};
 
-  setup_app() {
-    // create a vue instance
-    let app = createApp(App);
-    // mount the app
-    this.$mcp_chatbot = app.mount(this.$wrapper.get(0));
+// Auto-initialize if container exists
+document.addEventListener('DOMContentLoaded', () => {
+  const container = document.getElementById('mcp-terminal-app');
+  if (container) {
+    initMCPTerminal('mcp-terminal-app');
   }
-}
+});
 
-frappe.provide('frappe.ui');
-frappe.ui.McpChatbot = McpChatbot;
-export default McpChatbot;
+// Export for manual initialization
+window.initMCPTerminal = initMCPTerminal;
