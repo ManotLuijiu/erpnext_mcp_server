@@ -41,6 +41,11 @@
 
 <script>
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
+import ora from 'ora';
+import chalk from 'chalk';
+
+const spinner = ora(`Loading ${chalk.red('unicorns')}`).start();
+console.log('spinner', spinner);
 
 export default {
   name: 'MCPTerminalApp',

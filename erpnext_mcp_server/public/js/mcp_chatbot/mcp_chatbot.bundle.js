@@ -13,13 +13,15 @@ export const initMCPTerminal = async (containerId) => {
 
     // Initialize terminal
     const terminal = new Terminal({
+      convertEol: true,
+      disableStdin: false,
+      cursorBlink: true,
       fontSize: 14,
-      fontFamily: 'monospace',
+      fontFamily: '"Fira Code", monospace',
       theme: {
         background: '#1e1e1e',
         foreground: '#ffffff',
       },
-      cursorBlink: true,
     });
 
     const fitAddon = new FitAddon();
@@ -89,20 +91,23 @@ function setupRealtimeListeners(terminal) {
   frappe.realtime.on('terminal_output', (message) => {
     switch (message.type) {
       case 'command':
-        terminal.write(`\x1b[33m${message.data}\x1b[0m`); // Yellow for command
+        // terminal.write(`\x1b[33m${message.data}\x1b[0m`);
+        terminal.write(`\r\n\x1b[33m${message.data}\x1b[0m `);
         break;
 
       case 'stdout':
-        terminal.write(message.data);
+        // terminal.write(message.data);
+        terminal.write(`\r\n${message.data}`);
         break;
 
       case 'stderr':
-        terminal.write(`\x1b[31m${message.data}\x1b[0m`); // Red for errors
+        // terminal.write(`\x1b[31m${message.data}\x1b[0m`);
+        terminal.write(`\r\n\x1b[31m${message.data}\x1b[0m`);
         break;
 
-      case 'prompt':
-        showPrompt(terminal);
-        break;
+      // case 'prompt':
+      //   showPrompt(terminal);
+      //   break;
     }
     // if (message.type === 'output') {
     //   terminal.write(message.data);
@@ -115,10 +120,12 @@ function setupRealtimeListeners(terminal) {
 
 function executeCommand(terminal, command) {
   if (!command.trim()) {
+    terminal.write('\r\n');
     showPrompt(terminal);
     return;
   }
 
+  window.isProcessing = true;
   terminal.write('\r\n');
 
   // Send command to server
@@ -126,13 +133,17 @@ function executeCommand(terminal, command) {
     method: 'erpnext_mcp_server.api.vue_mcp_server.execute_terminal_command',
     args: { command: command },
     callback: (response) => {
-      if (!response || response.exc) {
-        terminal.write('\x1b[31mError communicating with server\x1b[0m\r\n');
-      }
+      console.log('Command executed:', response);
+      window.isProcessing = false;
+      // if (!response || response.exc) {
+      //   terminal.write('\x1b[31mError communicating with server\x1b[0m\r\n');
+      // }
       showPrompt(terminal);
     },
     error: (err) => {
-      terminal.write(`\x1b[31mError: ${err.message}\x1b[0m\r\n`);
+      console.error('Command execution failed:', err);
+      window.isProcessing = false;
+      // terminal.write(`\x1b[31mError: ${err.message}\x1b[0m\r\n`);
       showPrompt(terminal);
     },
   });

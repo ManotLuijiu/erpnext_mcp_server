@@ -26,7 +26,7 @@ def execute_terminal_command(command):
         # Publish initial response
         frappe.publish_realtime(
             event="terminal_output",
-            message={"type": "output", "data": f"Executing: {command}\n"},
+            message={"type": "output", "data": f"Executing: {command}"},
             user=frappe.session.user,
         )
 
@@ -77,32 +77,38 @@ def execute_terminal_command(command):
 
         # Send complete output at once
         if stdout:
+            cleaned_stdout = stdout.rstrip() + "\n"  # Ensure exactly one newline
             frappe.publish_realtime(
                 event="terminal_output",
-                message={"type": "stdout", "data": stdout},
+                # message={"type": "stdout", "data": stdout},
+                message={"type": "stdout", "data": cleaned_stdout},
                 user=frappe.session.user,
             )
 
         if stderr:
+            cleaned_stderr = stderr.rstrip() + "\n"  # Ensure exactly one newline
             frappe.publish_realtime(
                 event="terminal_output",
-                message={"type": "stderr", "data": stderr},
+                # message={"type": "stderr", "data": stderr},
+                message={"type": "stderr", "data": cleaned_stderr},
                 user=frappe.session.user,
             )
 
         # Show prompt again
-        frappe.publish_realtime(
-            event="terminal_output",
-            message={"type": "prompt", "data": ""},
-            user=frappe.session.user,
-        )
+        # frappe.publish_realtime(
+        #     event="terminal_output",
+        #     message={"type": "prompt", "data": ""},
+        #     user=frappe.session.user,
+        # )
 
         return {"success": True}
 
     except Exception as e:
+        error_msg = f"Error: {str(e)}\n"
         frappe.publish_realtime(
             event="terminal_output",
-            message={"type": "error", "data": f"Error: {str(e)}\n"},
+            # message={"type": "error", "data": f"Error: {str(e)}\n"},
+            message={"type": "stderr", "data": error_msg},
             user=frappe.session.user,
         )
         return {"success": False, "error": str(e)}
