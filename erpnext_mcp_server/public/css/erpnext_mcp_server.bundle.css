@@ -489,3 +489,28 @@
 .terminal.xterm {
   padding: 0 5px;
 }
+
+.xterm .xterm-viewport {
+  background-color: #1e1e1e !important;
+  border-radius: 0 0 5px 5px;
+}
+
+.xterm .xterm-screen {
+  padding: 10px;
+}
+
+/* Command input styling */
+.cmd-input {
+  color: #f8f8f2;
+  font-weight: bold;
+}
+
+/* Output styling */
+.cmd-output {
+  color: #e6db74;
+}
+
+/* Error styling */
+.cmd-error {
+  color: #ff5555;
+}
