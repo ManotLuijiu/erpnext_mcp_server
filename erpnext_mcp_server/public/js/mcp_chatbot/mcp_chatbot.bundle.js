@@ -68,19 +68,48 @@ export const initMCPTerminal = async (containerId) => {
   }
 };
 
+let isPromptVisible = false;
+
 function showPrompt(terminal) {
-  terminal.write('\r\n$ ');
+  console.log('terminal showPrompt', terminal);
+  if (!isPromptVisible) {
+    const user = frappe.session.user || 'user';
+    const site = frappe.boot.sitename || 'erpnext';
+    terminal.write(`\x1b[32m${user}@${site}\x1b[0m:\x1b[34m$\x1b[0m `);
+    isPromptVisible = true;
+  }
 }
+
+// function showPrompt(terminal) {
+//   terminal.write('\r\n$ ');
+// }
 
 function setupRealtimeListeners(terminal) {
   // Listen for terminal output from server
   frappe.realtime.on('terminal_output', (message) => {
-    if (message.type === 'output') {
-      terminal.write(message.data);
-    } else if (message.type === 'error') {
-      terminal.write(`\x1b[31m${message.data}\x1b[0m`); // Red color for errors
+    switch (message.type) {
+      case 'command':
+        terminal.write(`\x1b[33m${message.data}\x1b[0m`); // Yellow for command
+        break;
+
+      case 'stdout':
+        terminal.write(message.data);
+        break;
+
+      case 'stderr':
+        terminal.write(`\x1b[31m${message.data}\x1b[0m`); // Red for errors
+        break;
+
+      case 'prompt':
+        showPrompt(terminal);
+        break;
     }
-    showPrompt(terminal);
+    // if (message.type === 'output') {
+    //   terminal.write(message.data);
+    // } else if (message.type === 'error') {
+    //   terminal.write(`\x1b[31m${message.data}\x1b[0m`); // Red color for errors
+    // }
+    // showPrompt(terminal);
   });
 }
 

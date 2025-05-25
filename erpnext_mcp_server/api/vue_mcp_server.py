@@ -61,16 +61,41 @@ def execute_terminal_command(command):
         )
 
         # Stream output in realtime
-        if process.stdout is not None:
-            for line in process.stdout:
-                frappe.publish_realtime(
-                    event="terminal_output",
-                    message={"type": "output", "data": line},
-                    user=frappe.session.user,
-                )
+        # if process.stdout is not None:
+        #     for line in process.stdout:
+        #         frappe.publish_realtime(
+        #             event="terminal_output",
+        #             message={"type": "output", "data": line},
+        #             user=frappe.session.user,
+        #         )
 
         # Wait for process to complete
-        process.wait()
+        # process.wait()
+
+        # Collect all output first (like terminal buffers)
+        stdout, stderr = process.communicate()
+
+        # Send complete output at once
+        if stdout:
+            frappe.publish_realtime(
+                event="terminal_output",
+                message={"type": "stdout", "data": stdout},
+                user=frappe.session.user,
+            )
+
+        if stderr:
+            frappe.publish_realtime(
+                event="terminal_output",
+                message={"type": "stderr", "data": stderr},
+                user=frappe.session.user,
+            )
+
+        # Show prompt again
+        frappe.publish_realtime(
+            event="terminal_output",
+            message={"type": "prompt", "data": ""},
+            user=frappe.session.user,
+        )
 
         return {"success": True}
 
