@@ -5,6 +5,10 @@ import frappe
 def execute_terminal_command(command):
     """Execute terminal command and send realtime updates"""
     try:
+        # Security check - only allow certain commands
+        allowed_commands = ["pwd", "ls", "whoami", "data"]
+        base_command = command.split()[0] if command else ""
+
         # Publish initial response
         frappe.publish_realtime(
             event="terminal_output",

@@ -1,94 +1,121 @@
-import { createApp } from 'vue';
-import { createRouter, createWebHashHistory } from 'vue-router';
-import io from 'socket.io-client';
-import App from './App.vue';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-// import 'xterm/css/xterm.css';
 
-// Load xterm.js and addons
-const loadXterm = async () => {
-  // Load xterm.js CSS
-  const xtermCSS = document.createElement('link');
-  xtermCSS.rel = 'stylesheet';
-  xtermCSS.href = 'node_modules/@xterm/xterm/css/xterm.css';
-  document.head.appendChild(xtermCSS);
-  const containerElement = document.getElementById('xterm__container');
-  if (!containerElement) throw new Error('Terminal container not found');
-  terminal.open(containerElement);
-
-  const terminal = new Terminal();
-  const fitAddon = new FitAddon();
-  terminal.loadAddon(fitAddon);
-  terminal.open(containerElement);
-  fitAddon.fit();
-
-  // Load xterm.js scripts if not already loaded
-  //   if (!window.Terminal) {
-  //     await import('node_modules/@xterm/xterm/lib/xterm.js');
-  //   }
-
-  //   if (!window.FitAddon) {
-  //     await import('/assets/node_modules/xterm-addon-fit/lib/xterm-addon-fit.js');
-  //   }
-};
-
-// Router configuration
-const router = createRouter({
-  history: createWebHashHistory(),
-  routes: [
-    {
-      path: '/',
-      name: 'Terminal',
-      component: App,
-    },
-  ],
-});
-
-// Initialize the application
 export const initMCPTerminal = async (containerId) => {
   try {
-    // Load xterm.js dependencies
-    await loadXterm();
+    // Wait for container to be ready
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Create Vue app
-    const app = createApp(App);
-
-    // Use router
-    app.use(router);
-
-    // Global properties
-    app.config.globalProperties.$frappe = window.frappe;
-    app.config.globalProperties.$io = io;
-
-    // Error handler
-    app.config.errorHandler = (err, vm, info) => {
-      console.error('Vue Error:', err);
-      console.error('Component:', vm);
-      console.error('Info:', info);
-    };
-
-    // Mount the app
     const container = document.getElementById(containerId);
-    if (!container) {
-      throw new Error(`Container with ID '${containerId}' not found`);
-    }
+    if (!container) throw new Error(`Container ${containerId} not found`);
 
-    app.mount(container);
+    console.log('container mcp_chatbot.bundle.js', container);
 
-    console.log('MCP Terminal Vue app initialized successfully');
-    return app;
+    // Initialize terminal
+    const terminal = new Terminal({
+      fontSize: 14,
+      fontFamily: 'monospace',
+      theme: {
+        background: '#1e1e1e',
+        foreground: '#ffffff',
+      },
+      cursorBlink: true,
+    });
+
+    const fitAddon = new FitAddon();
+    terminal.loadAddon(fitAddon);
+
+    // Find the terminal element within the container
+    const terminalElement = container.querySelector('#terminal');
+    if (!terminalElement) throw new Error('Terminal element not found');
+
+    terminal.open(terminalElement);
+    fitAddon.fit();
+
+    // Basic terminal functionality
+    terminal.writeln('Welcome to MCP Terminal!');
+    terminal.writeln('Type commands and press Enter to execute');
+    showPrompt(terminal);
+    // terminal.write('$ ');
+
+    // Setup realtime listeners
+    setupRealtimeListeners(terminal);
+
+    // Handle terminal input
+    let currentCommand = '';
+    terminal.onData((data) => {
+      if (data === '\r') {
+        // Enter pressed
+        executeCommand(terminal, currentCommand);
+        currentCommand = '';
+      } else if (data === '\x7f') {
+        // Backspace
+        if (currentCommand.length > 0) {
+          currentCommand = currentCommand.slice(0, -1);
+          terminal.write('\b \b');
+        }
+      } else if (data.charCodeAt(0) >= 32 && data.charCodeAt(0) <= 126) {
+        // Printable characters
+        currentCommand += data;
+        terminal.write(data);
+      }
+    });
+
+    return terminal;
   } catch (error) {
-    console.error('Failed to initialize MCP Terminal:', error);
+    console.error('Terminal initialization failed:', error);
     throw error;
   }
 };
+
+function showPrompt(terminal) {
+  terminal.write('\r\n$ ');
+}
+
+function setupRealtimeListeners(terminal) {
+  // Listen for terminal output from server
+  frappe.realtime.on('terminal_output', (message) => {
+    if (message.type === 'output') {
+      terminal.write(message.data);
+    } else if (message.type === 'error') {
+      terminal.write(`\x1b[31m${message.data}\x1b[0m`); // Red color for errors
+    }
+    showPrompt(terminal);
+  });
+}
+
+function executeCommand(terminal, command) {
+  if (!command.trim()) {
+    showPrompt(terminal);
+    return;
+  }
+
+  terminal.write('\r\n');
+
+  // Send command to server
+  frappe.call({
+    method: 'erpnext_mcp_server.api.vue_mcp_server.execute_terminal_command',
+    args: { command: command },
+    callback: (response) => {
+      if (!response || response.exc) {
+        terminal.write('\x1b[31mError communicating with server\x1b[0m\r\n');
+      }
+      showPrompt(terminal);
+    },
+    error: (err) => {
+      terminal.write(`\x1b[31mError: ${err.message}\x1b[0m\r\n`);
+      showPrompt(terminal);
+    },
+  });
+}
 
 // Auto-initialize if container exists
 document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('mcp-terminal-app');
   if (container) {
-    initMCPTerminal('mcp-terminal-app');
+    initMCPTerminal('mcp-terminal-app').catch((err) => {
+      console.error('Failed to initialize terminal:', err);
+    });
   }
 });
 
