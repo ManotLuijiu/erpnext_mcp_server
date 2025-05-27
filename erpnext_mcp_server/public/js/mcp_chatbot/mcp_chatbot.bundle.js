@@ -1,5 +1,12 @@
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import {
+  TerminalColors as chalk,
+  TerminalSpinner as ora,
+  TerminalFiglet as figlet,
+  TerminalProgress,
+  TerminalBox,
+} from '../terminal_utils';
 
 export const initMCPTerminal = async (containerId) => {
   try {
@@ -47,8 +54,9 @@ export const initMCPTerminal = async (containerId) => {
       },
       cols: 120,
       rows: 30,
-      scrollback: 1000,
+      scrollback: 2000,
       tabStopWidth: 4,
+      allowProposedApi: true,
     });
 
     const fitAddon = new FitAddon();
@@ -60,14 +68,21 @@ export const initMCPTerminal = async (containerId) => {
 
     terminal.open(terminalElement);
 
-    // Add some padding to terminal
+    // Enhanced styling with padding and effects
     // terminalElement.style.padding = '20px';
     // terminalElement.style.margin = '10px';
+    // terminalElement.style.borderRadius = '8px';
+    // terminalElement.style.background =
+    //   'linear-gradient(135deg, #0a0e27 0%, #1e1e2e 100%)';
+    // terminalElement.style.boxShadow = 'inset 0 0 20px rgba(0, 0, 0, 0.5)';
 
     fitAddon.fit();
 
     // Show welcome message with available commands
-    showWelcomeMessage(terminal);
+    // showWelcomeMessage(terminal);
+
+    // Show professional welcome message with ASCII art
+    await showProfessionalWelcome(terminal);
 
     // Basic terminal functionality
     // terminal.writeln('Welcome to MCP Terminal!');
@@ -83,9 +98,10 @@ export const initMCPTerminal = async (containerId) => {
     let commandHistory = [];
     let historyIndex = -1;
     let isProcessing = false;
+    let currentSpinner = null;
 
-    terminal.onData((data) => {
-      if (isProcessing) return;
+    terminal.onData(async (data) => {
+      if (isProcessing && currentSpinner) return;
 
       const code = data.charCodeAt(0);
 
@@ -97,7 +113,8 @@ export const initMCPTerminal = async (containerId) => {
               commandHistory.shift();
             }
             historyIndex = -1;
-            executeCommand(terminal, currentCommand.trim());
+            // executeCommand(terminal, currentCommand.trim());
+            executeCommandWithStyle(terminal, currentCommand.trim());
             isProcessing = true;
           } else {
             terminal.write('\r\n');
@@ -118,19 +135,29 @@ export const initMCPTerminal = async (containerId) => {
           break;
 
         case 3: // Ctrl+C
-          terminal.write('^C\r\n');
+          if (currentSpinner) {
+            currentSpinner.fail('Command cancelled');
+            currentSpinner = null;
+            isProcessing = false;
+          }
+          // terminal.write('^C\r\n');
+          terminal.write(chalk.red('^C') + '\r\n');
           currentCommand = '';
-          showPrompt(terminal);
+          // showPrompt(terminal);
+          showStyledPrompt(terminal);
           break;
 
         case 12: // Ctrl+L
           terminal.clear();
-          showWelcomeMessage(terminal);
-          showPrompt(terminal);
+          await showProfessionalWelcome(terminal);
+          showStyledPrompt(terminal);
+          // showWelcomeMessage(terminal);
+          // showPrompt(terminal);
           break;
 
         case 9: // Tab - show available commands
-          showAvailableCommands(terminal);
+          // showAvailableCommands(terminal);
+          showStyledAvailableCommands(terminal);
           break;
 
         default:
@@ -187,7 +214,14 @@ export const initMCPTerminal = async (containerId) => {
     // Handle processing state
     window.setProcessingState = (processing) => {
       isProcessing = processing;
+      if (!processing && currentSpinner) {
+        currentSpinner.succeed('Command completed');
+        currentSpinner = null;
+      }
     };
+
+    // Store terminal instance globally for utilities
+    window.mcpTerminal = terminal;
 
     return terminal;
   } catch (error) {
@@ -196,74 +230,188 @@ export const initMCPTerminal = async (containerId) => {
   }
 };
 
-function showWelcomeMessage(terminal) {
-  const welcome = `\x1b[36m
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                           🚀 ERPNext MCP Terminal                             
-║                      Model Context Protocol Interface                        ║
-║                                                                              ║
-║  Type 'help' for available commands or 'Tab' to see quick commands           ║
-╚══════════════════════════════════════════════════════════════════════════════╝\x1b[0m
+async function showProfessionalWelcome(terminal) {
+  // Create ASCII art banner
+  const banner = figlet.banner('ERPNext MCP', {
+    font: 'block',
+    color: 'brightCyan',
+    border: true,
+    padding: 1,
+  });
 
-\x1b[32m✅ Terminal initialized successfully!\x1b[0m
-\x1b[33m💡 Pro tip: Use Tab to see available commands, ↑/↓ for command history\x1b[0m
+  // Welcome text with professional styling
+  const welcomeText = `
+${banner}
 
+${chalk.brightGreen('🚀 Professional Terminal Interface')}
+${chalk.gray('━'.repeat(60))}
+
+${chalk.yellow('✨ Features:')}
+  ${chalk.green('•')} Professional CLI styling with ${chalk.cyan('chalk')}-like colors
+  ${chalk.green('•')} Loading spinners with ${chalk.cyan('ora')}-style animations  
+  ${chalk.green('•')} ASCII art banners with ${chalk.cyan('figlet')}-style fonts
+  ${chalk.green('•')} Progress bars and professional formatting
+  ${chalk.green('•')} Advanced box drawing and table layouts
+
+${chalk.yellow('⚡ Quick Start:')}
+  ${chalk.cyan('Tab')}        Show available commands
+  ${chalk.cyan('help')}       Detailed command reference  
+  ${chalk.cyan('status')}     System information
+  ${chalk.cyan('clear')}      Clear terminal screen
+
+${chalk.brightMagenta('💡 Pro Tips:')}
+  • Use ${chalk.cyan('↑/↓')} arrows for command history
+  • ${chalk.cyan('Ctrl+C')} to cancel running commands
+  • ${chalk.cyan('Ctrl+L')} for quick screen clear
+  • Commands support ${chalk.green('--help')} flag for detailed usage
+
+${chalk.gray('━'.repeat(60))}
+${chalk.dim('Ready for professional ERPNext management...')}
 `;
-  terminal.write(welcome);
-  showPrompt(terminal);
+
+  terminal.write(welcomeText);
+  showStyledPrompt(terminal);
 }
 
-function showAvailableCommands(terminal) {
-  terminal.write('\r\n\x1b[36m📚 Quick Commands:\x1b[0m\r\n');
-  terminal.write(
-    '\x1b[90m┌─────────────────────┬─────────────────────────────────────────────────────┐\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m \x1b[33mCommand\x1b[0m             \x1b[90m│\x1b[0m \x1b[37mDescription\x1b[0m                                     \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m├─────────────────────┼─────────────────────────────────────────────────────┤\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m help                \x1b[90m│\x1b[0m Show detailed help and usage examples              \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m list_doctypes       \x1b[90m│\x1b[0m List all available document types                  \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m get_document        \x1b[90m│\x1b[0m Get specific document (e.g., Customer "CUST-001") \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m search_documents    \x1b[90m│\x1b[0m Search documents by criteria                       \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m execute_sql         \x1b[90m│\x1b[0m Execute SQL query (SELECT only)                    \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m get_system_info     \x1b[90m│\x1b[0m Show system information                            \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m list_files          \x1b[90m│\x1b[0m List files in directory                            \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m clear               \x1b[90m│\x1b[0m Clear terminal screen                              \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m│\x1b[0m status              \x1b[90m│\x1b[0m Show connection status                             \x1b[90m│\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\x1b[90m└─────────────────────┴─────────────────────────────────────────────────────┘\x1b[0m\r\n'
-  );
-  terminal.write(
-    '\r\n\x1b[33m💡 Type any command above or "help" for detailed examples\x1b[0m\r\n'
-  );
-  showPrompt(terminal);
+function showStyledAvailableCommands(terminal) {
+  terminal.write('\r\n');
+
+  // Create professional command table
+  const commands = [
+    ['list_doctypes', 'List all document types with module info'],
+    ['get_document', 'Fetch specific document with formatting'],
+    ['search_documents', 'Advanced document search with filters'],
+    ['execute_sql', 'Execute SQL queries (SELECT only)'],
+    ['get_system_info', 'Comprehensive system information'],
+    ['list_files', 'Browse directories with file details'],
+    ['read_file', 'View file contents with syntax awareness'],
+    ['bench_command', 'Execute safe bench operations'],
+    ['help', 'Show detailed help with examples'],
+    ['status', 'Display connection and system status'],
+    ['clear', 'Clear terminal with welcome message'],
+  ];
+
+  const table = TerminalBox.table(commands, {
+    style: 'rounded',
+    headers: ['Command', 'Description'],
+    colors: { header: 'brightCyan' },
+  });
+
+  terminal.write(chalk.cyan(table) + '\r\n\r\n');
+
+  // Add usage examples box
+  const examples = `${chalk.yellow('💡 Usage Examples:')}
+
+${chalk.cyan('get_document')} Customer "CUST-00001"
+${chalk.cyan('search_documents')} Item "laptop" --limit 10  
+${chalk.cyan('execute_sql')} "SELECT name FROM \`tabCustomer\` LIMIT 5"
+${chalk.cyan('list_files')} ./apps --recursive
+${chalk.cyan('bench_command')} --version`;
+
+  const exampleBox = TerminalBox.create(examples, {
+    style: 'single',
+    color: 'brightYellow',
+    padding: 1,
+    title: 'Examples',
+  });
+
+  terminal.write(exampleBox + '\r\n');
+  showStyledPrompt(terminal);
 }
+
+function showStyledPrompt(terminal) {
+  if (!terminal) return;
+
+  const user = frappe?.session?.user || 'user';
+  const site = frappe?.boot?.sitename || 'erpnext';
+  const timestamp = new Date().toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  // Professional prompt with colors and styling
+  const statusIcon = chalk.brightGreen('●');
+  const userInfo = chalk.chain().cyan().bold().apply(`${user}@${site}`);
+  const timeInfo = chalk.dim(`[${timestamp}]`);
+  const pathInfo = chalk.brightBlue('~/frappe-bench/sites');
+  const promptSymbol = chalk.chain().green().bold().apply('❯');
+
+  terminal.write(`\r\n${statusIcon} ${userInfo} ${timeInfo}\r\n`);
+  terminal.write(`${chalk.dim('┌─')} ${pathInfo}\r\n`);
+  terminal.write(`${chalk.dim('└─')} ${promptSymbol} `);
+}
+
+// function showWelcomeMessage(terminal) {
+//   const welcome = `\x1b[36m
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║                           🚀 ERPNext MCP Terminal
+// ║                      Model Context Protocol Interface                        ║
+// ║                                                                              ║
+// ║  Type 'help' for available commands or 'Tab' to see quick commands           ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝\x1b[0m
+
+// \x1b[32m✅ Terminal initialized successfully!\x1b[0m
+// \x1b[33m💡 Pro tip: Use Tab to see available commands, ↑/↓ for command history\x1b[0m
+
+// `;
+//   terminal.write(welcome);
+//   showPrompt(terminal);
+// }
+
+// function showAvailableCommands(terminal) {
+//   terminal.write('\r\n\x1b[36m📚 Quick Commands:\x1b[0m\r\n');
+//   terminal.write(
+//     '\x1b[90m┌─────────────────────┬─────────────────────────────────────────────────────┐\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m \x1b[33mCommand\x1b[0m             \x1b[90m│\x1b[0m \x1b[37mDescription\x1b[0m                                     \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m├─────────────────────┼─────────────────────────────────────────────────────┤\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m help                \x1b[90m│\x1b[0m Show detailed help and usage examples              \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m list_doctypes       \x1b[90m│\x1b[0m List all available document types                  \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m get_document        \x1b[90m│\x1b[0m Get specific document (e.g., Customer "CUST-001") \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m search_documents    \x1b[90m│\x1b[0m Search documents by criteria                       \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m execute_sql         \x1b[90m│\x1b[0m Execute SQL query (SELECT only)                    \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m get_system_info     \x1b[90m│\x1b[0m Show system information                            \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m list_files          \x1b[90m│\x1b[0m List files in directory                            \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m clear               \x1b[90m│\x1b[0m Clear terminal screen                              \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m│\x1b[0m status              \x1b[90m│\x1b[0m Show connection status                             \x1b[90m│\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\x1b[90m└─────────────────────┴─────────────────────────────────────────────────────┘\x1b[0m\r\n'
+//   );
+//   terminal.write(
+//     '\r\n\x1b[33m💡 Type any command above or "help" for detailed examples\x1b[0m\r\n'
+//   );
+//   showPrompt(terminal);
+// }
 
 function replaceCurrentLine(terminal, newCommand) {
   // Move to beginning of line and clear it
   terminal.write('\r\x1b[K');
-  showPrompt(terminal);
+  showStyledPrompt(terminal);
+  // showPrompt(terminal);
   terminal.write(newCommand);
 }
 
@@ -307,39 +455,74 @@ function showPrompt(terminal) {
 function setupRealtimeListeners(terminal) {
   // Listen for terminal output from server
   frappe.realtime.on('terminal_output', (message) => {
+    if (window.mcpCurrentSpinner) {
+      window.mcpCurrentSpinner.stop();
+      window.mcpCurrentSpinner = null;
+    }
+
     window.setProcessingState && window.setProcessingState(false);
 
     switch (message.type) {
       case 'command':
         // terminal.write(`\x1b[33m${message.data}\x1b[0m`);
         // terminal.write(`\r\n\x1b[33m${message.data}\x1b[0m `);
+        // terminal.write(
+        //   `\r\n\x1b[90m▶\x1b[0m \x1b[33m${message.data}\x1b[0m\r\n`
+        // );
         terminal.write(
-          `\r\n\x1b[90m▶\x1b[0m \x1b[33m${message.data}\x1b[0m\r\n`
+          `\r\n${chalk.dim('▶')} ${chalk.brightYellow(message.data)}\r\n`
         );
         break;
 
-      case 'stdout':
+      case 'stdout': {
         // terminal.write(message.data);
         // terminal.write(`\r\n${message.data}`);
-        terminal.write(`\r\n${formatOutput(message.data)}\r\n`);
+        // terminal.write(`\r\n${formatOutput(message.data)}\r\n`);
+        const formattedOutput = formatProfessionalOutput(message.data);
+        terminal.write(`\r\n${formattedOutput}\r\n`);
         break;
+      }
 
       case 'stderr':
         // terminal.write(`\x1b[31m${message.data}\x1b[0m`);
         // terminal.write(`\r\n\x1b[31m${message.data}\x1b[0m`);
-        terminal.write(`\r\n\x1b[31m❌ ${message.data}\x1b[0m\r\n`);
+        // terminal.write(`\r\n\x1b[31m❌ ${message.data}\x1b[0m\r\n`);
+        terminal.write(
+          `\r\n${chalk.chain().red().bold().apply('❌ ERROR:')} ${chalk.red(message.data)}\r\n`
+        );
         break;
 
       case 'success':
-        terminal.write(`\r\n\x1b[32m✅ ${message.data}\x1b[0m\r\n`);
+        // terminal.write(`\r\n\x1b[32m✅ ${message.data}\x1b[0m\r\n`);
+        terminal.write(
+          `\r\n${chalk.chain().green().bold().apply('✅ SUCCESS:')} ${chalk.brightGreen(message.data)}\r\n`
+        );
         break;
 
       case 'info':
-        terminal.write(`\r\n\x1b[36mℹ️  ${message.data}\x1b[0m\r\n`);
+        // terminal.write(`\r\n\x1b[36mℹ️  ${message.data}\x1b[0m\r\n`);
+        terminal.write(
+          `\r\n${chalk.chain().blue().bold().apply('ℹ️  INFO:')} ${chalk.cyan(message.data)}\r\n`
+        );
         break;
 
       case 'warning':
-        terminal.write(`\r\n\x1b[33m⚠️  ${message.data}\x1b[0m\r\n`);
+        // terminal.write(`\r\n\x1b[33m⚠️  ${message.data}\x1b[0m\r\n`);
+        terminal.write(
+          `\r\n${chalk.chain().yellow().bold().apply('⚠️  WARNING:')} ${chalk.yellow(message.data)}\r\n`
+        );
+        break;
+
+      case 'progress':
+        if (message.current !== undefined && message.total !== undefined) {
+          showProgressBar(
+            terminal,
+            message.current,
+            message.total,
+            message.label
+          );
+          return; // Don't show prompt for progress updates
+        }
         break;
 
       default:
@@ -354,38 +537,71 @@ function setupRealtimeListeners(terminal) {
     // } else if (message.type === 'error') {
     //   terminal.write(`\x1b[31m${message.data}\x1b[0m`); // Red color for errors
     // }
-    showPrompt(terminal);
+    // showPrompt(terminal);
+    showStyledPrompt(terminal);
   });
 
   // Handle connection status
   frappe.realtime.on('mcp_status', (message) => {
     switch (message.status) {
       case 'connected':
-        terminal.write(`\r\n\x1b[32m🟢 MCP Server connected\x1b[0m\r\n`);
+        // terminal.write(`\r\n\x1b[32m🟢 MCP Server connected\x1b[0m\r\n`);
+        terminal.write(
+          `\r\n${chalk.chain().green().bold().apply('🟢 CONNECTED:')} MCP Server online\r\n`
+        );
         break;
       case 'disconnected':
-        terminal.write(`\r\n\x1b[31m🔴 MCP Server disconnected\x1b[0m\r\n`);
+        // terminal.write(`\r\n\x1b[31m🔴 MCP Server disconnected\x1b[0m\r\n`);
+        terminal.write(
+          `\r\n${chalk.chain().red().bold().apply('🔴 DISCONNECTED:')} MCP Server offline\r\n`
+        );
         break;
       case 'error':
+        // terminal.write(
+        //   `\r\n\x1b[31m❌ Connection error: ${message.error}\x1b[0m\r\n`
+        // );
         terminal.write(
-          `\r\n\x1b[31m❌ Connection error: ${message.error}\x1b[0m\r\n`
+          `\r\n${chalk.chain().red().bold().apply('❌ CONNECTION ERROR:')} ${chalk.red(message.error)}\r\n`
         );
         break;
     }
-    showPrompt(terminal);
+    // showPrompt(terminal);
+    showStyledPrompt(terminal);
   });
 }
 
-function formatOutput(data) {
+function formatProfessionalOutput(data) {
   if (typeof data === 'string') {
-    return data;
+    // Add syntax highlighting for common patterns
+    return data
+      .replace(/^(📋|📄|🔍|📊|🖥️|📁|🔧)/gm, chalk.brightCyan('$1'))
+      .replace(/^(✅|❌|⚠️|ℹ️)/gm, (match) => {
+        switch (match) {
+          case '✅':
+            return chalk.brightGreen(match);
+          case '❌':
+            return chalk.brightRed(match);
+          case '⚠️':
+            return chalk.brightYellow(match);
+          case 'ℹ️':
+            return chalk.brightBlue(match);
+          default:
+            return match;
+        }
+      })
+      .replace(/^(═+|─+)/gm, chalk.dim('$1'))
+      .replace(/^(\x20\x20•)/gm, chalk.green('$1'))
+      .replace(/(\w+:)/g, chalk.yellow('$1'))
+      .replace(/(".*?")/g, chalk.brightMagenta('$1'))
+      .replace(/(\d+)/g, chalk.brightBlue('$1'));
   }
 
   if (typeof data === 'object') {
     try {
-      return JSON.stringify(data, null, 2);
+      const jsonString = JSON.stringify(data, null, 2);
+      return chalk.dim(jsonString);
     } catch (e) {
-      console.error('e', e);
+      console.err('e', e);
       return String(data);
     }
   }
@@ -393,19 +609,44 @@ function formatOutput(data) {
   return String(data);
 }
 
-function executeCommand(terminal, command) {
-  if (!command.trim()) {
-    // terminal.write('\r\n');
-    // showPrompt(terminal);
-    return;
-  }
+function showProgressBar(terminal, current, total, label = 'Progress') {
+  const progress = new TerminalProgress(total, {
+    terminal: terminal,
+    width: 30,
+    format: `${chalk.cyan(label)}: {bar} {percentage}% ({current}/{total})`,
+    complete: '█',
+    incomplete: '░',
+  });
 
-  // Handle built-in commands
+  progress.update(current);
+}
+
+// function formatOutput(data) {
+//   if (typeof data === 'string') {
+//     return data;
+//   }
+
+//   if (typeof data === 'object') {
+//     try {
+//       return JSON.stringify(data, null, 2);
+//     } catch (e) {
+//       console.error('e', e);
+//       return String(data);
+//     }
+//   }
+
+//   return String(data);
+// }
+
+function executeCommandWithStyle(terminal, command) {
+  if (!command.trim()) return;
+
+  // Handle built-in commands with enhanced styling
   const lowerCommand = command.toLowerCase().trim();
 
   if (lowerCommand === 'clear' || lowerCommand === 'cls') {
     terminal.clear();
-    showWelcomeMessage(terminal);
+    showProfessionalWelcome(terminal);
     return;
   }
 
@@ -419,12 +660,21 @@ function executeCommand(terminal, command) {
     return;
   }
 
-  // Show command being executed
-  terminal.write(`\r\n\x1b[90m▶\x1b[0m \x1b[33mExecuting: ${command}\x1b[0m`);
-  // terminal.write(`\r\n\x1b[90m⏳ Processing...\x1b[0m\r\n`);
+  // Show command execution with professional spinner
+  terminal.write(
+    `\r\n${chalk.dim('▶')} ${chalk.brightYellow(`Executing: ${command}`)}\r\n`
+  );
 
-  // window.isProcessing = true;
-  // terminal.write('\r\n');
+  // Create and start spinner
+  const spinner = new ora({
+    text: 'Processing command...',
+    spinner: 'dots',
+    color: 'cyan',
+    terminal: terminal,
+  });
+
+  spinner.start();
+  window.mcpCurrentSpinner = spinner;
 
   // Send command to server
   frappe.call({
@@ -432,90 +682,272 @@ function executeCommand(terminal, command) {
     args: { command: command },
     callback: (response) => {
       console.log('Command executed:', response);
-      window.setProcessingState && window.setProcessingState(false);
 
-      if (response && response.message) {
-        // Success response
-        if (response.message.success !== false) {
-          terminal.write(`\x1b[32m✅ Command completed\x1b[0m\r\n`);
+      if (spinner) {
+        if (
+          response &&
+          response.message &&
+          response.message.success !== false
+        ) {
+          spinner.succeed('Command completed successfully');
+        } else {
+          spinner.warn('Command completed with warnings');
         }
-      } else {
-        terminal.write(`\x1b[33m⚠️  No response from server\x1b[0m\r\n`);
       }
-      // window.isProcessing = false;
-      // if (!response || response.exc) {
-      //   terminal.write('\x1b[31mError communicating with server\x1b[0m\r\n');
-      // }
-      showPrompt(terminal);
+
+      window.setProcessingState && window.setProcessingState(false);
+      showStyledPrompt(terminal);
     },
     error: (err) => {
       console.error('Command execution failed:', err);
+
+      if (spinner) {
+        spinner.fail(`Error: ${err.message || 'Command execution failed'}`);
+      }
+
       window.setProcessingState && window.setProcessingState(false);
-      // window.isProcessing = false;
-      // terminal.write(`\x1b[31mError: ${err.message}\x1b[0m\r\n`);
-      terminal.write(
-        `\x1b[31m❌ Error: ${err.message || 'Command execution failed'}\x1b[0m\r\n`
-      );
-      showPrompt(terminal);
+      showStyledPrompt(terminal);
     },
   });
 }
 
+// function executeCommand(terminal, command) {
+//   if (!command.trim()) {
+//     // terminal.write('\r\n');
+//     // showPrompt(terminal);
+//     return;
+//   }
+
+//   // Handle built-in commands
+//   const lowerCommand = command.toLowerCase().trim();
+
+//   if (lowerCommand === 'clear' || lowerCommand === 'cls') {
+//     terminal.clear();
+//     showWelcomeMessage(terminal);
+//     return;
+//   }
+
+//   if (lowerCommand === 'help') {
+//     showDetailedHelp(terminal);
+//     return;
+//   }
+
+//   if (lowerCommand === 'status') {
+//     showSystemStatus(terminal);
+//     return;
+//   }
+
+//   // Show command being executed
+//   terminal.write(`\r\n\x1b[90m▶\x1b[0m \x1b[33mExecuting: ${command}\x1b[0m`);
+//   // terminal.write(`\r\n\x1b[90m⏳ Processing...\x1b[0m\r\n`);
+
+//   // window.isProcessing = true;
+//   // terminal.write('\r\n');
+
+//   // Send command to server
+//   frappe.call({
+//     method: 'erpnext_mcp_server.api.vue_mcp_server.execute_terminal_command',
+//     args: { command: command },
+//     callback: (response) => {
+//       console.log('Command executed:', response);
+//       window.setProcessingState && window.setProcessingState(false);
+
+//       if (response && response.message) {
+//         // Success response
+//         if (response.message.success !== false) {
+//           terminal.write(`\x1b[32m✅ Command completed\x1b[0m\r\n`);
+//         }
+//       } else {
+//         terminal.write(`\x1b[33m⚠️  No response from server\x1b[0m\r\n`);
+//       }
+//       // window.isProcessing = false;
+//       // if (!response || response.exc) {
+//       //   terminal.write('\x1b[31mError communicating with server\x1b[0m\r\n');
+//       // }
+//       showPrompt(terminal);
+//     },
+//     error: (err) => {
+//       console.error('Command execution failed:', err);
+//       window.setProcessingState && window.setProcessingState(false);
+//       // window.isProcessing = false;
+//       // terminal.write(`\x1b[31mError: ${err.message}\x1b[0m\r\n`);
+//       terminal.write(
+//         `\x1b[31m❌ Error: ${err.message || 'Command execution failed'}\x1b[0m\r\n`
+//       );
+//       showPrompt(terminal);
+//     },
+//   });
+// }
+
 function showDetailedHelp(terminal) {
-  const help = `\r\n\x1b[36m📖 ERPNext MCP Terminal - Detailed Help\x1b[0m\r\n
-\x1b[33m📄 Document Operations:\x1b[0m
-  \x1b[32mlist_doctypes\x1b[0m                     - List all available document types
-  \x1b[32mget_document\x1b[0m <doctype> <name>     - Get specific document
-    Example: get_document Customer "CUST-00001"
-    Example: get_document "Sales Invoice" "SINV-2024-00001"
-  
-  \x1b[32msearch_documents\x1b[0m <doctype> <query> - Search documents
-    Example: search_documents Customer "John Doe"
-    Example: search_documents Item "laptop"
+  const helpContent = `
+${figlet.generate('HELP', 'small', 'brightYellow')}
 
-\x1b[33m🗄️  Database Operations:\x1b[0m
-  \x1b[32mexecute_sql\x1b[0m <query>              - Execute SQL query (SELECT only)
-    Example: execute_sql "SELECT name, customer_name FROM \`tabCustomer\` LIMIT 10"
-    Example: execute_sql "SELECT COUNT(*) FROM \`tabSales Invoice\`"
+${chalk.brightCyan('📖 ERPNext MCP Terminal - Comprehensive Guide')}
+${chalk.gray('━'.repeat(70))}
 
-\x1b[33m⚙️  System Operations:\x1b[0m
-  \x1b[32mget_system_info\x1b[0m                   - Show system information
-  \x1b[32mlist_files\x1b[0m <path>                 - List files in directory
-  \x1b[32mstatus\x1b[0m                            - Show connection status
+${chalk.brightYellow('📄 Document Operations:')}
+  ${chalk.green('list_doctypes')}
+    ${chalk.dim('→')} Lists all available document types organized by module
+    ${chalk.cyan('Example:')} list_doctypes
+    
+  ${chalk.green('get_document')} ${chalk.dim('<doctype> <name>')}
+    ${chalk.dim('→')} Retrieves and formats a specific document
+    ${chalk.cyan('Examples:')} 
+      get_document Customer "CUST-00001"
+      get_document "Sales Invoice" "SINV-2024-00001"
+    
+  ${chalk.green('search_documents')} ${chalk.dim('<doctype> <query> [--limit N]')}
+    ${chalk.dim('→')} Searches documents with advanced filtering
+    ${chalk.cyan('Examples:')}
+      search_documents Customer "John Doe"
+      search_documents Item "laptop" --limit 10
 
-\x1b[33m🖥️  Terminal Commands:\x1b[0m
-  \x1b[32mhelp\x1b[0m          - Show this help        \x1b[32mclear\x1b[0m    - Clear screen
-  \x1b[32mTab\x1b[0m           - Show quick commands    \x1b[32m↑/↓\x1b[0m      - Command history
-  \x1b[32mCtrl+C\x1b[0m        - Cancel command         \x1b[32mCtrl+L\x1b[0m   - Clear screen
+${chalk.brightYellow('🗄️  Database Operations:')}
+  ${chalk.green('execute_sql')} ${chalk.dim('<query>')}
+    ${chalk.dim('→')} Executes SELECT queries with safety checks
+    ${chalk.cyan('Examples:')}
+      execute_sql "SELECT name, customer_name FROM \`tabCustomer\` LIMIT 10"
+      execute_sql "SELECT COUNT(*) as total FROM \`tabSales Invoice\`"
+    ${chalk.red('Note:')} Only SELECT queries allowed for security
 
-\x1b[33m💡 Pro Tips:\x1b[0m
-  • Use quotes for names with spaces: get_document "Sales Invoice" "SINV-001"
-  • Press Tab to see available commands quickly
-  • Use arrow keys to navigate command history
-  • Type 'status' to check system connection
+${chalk.brightYellow('⚙️  System Operations:')}
+  ${chalk.green('get_system_info')}
+    ${chalk.dim('→')} Displays comprehensive system information
+    ${chalk.dim('    Includes:')} Frappe/ERPNext versions, database info, platform details
+    
+  ${chalk.green('bench_command')} ${chalk.dim('<command>')}
+    ${chalk.dim('→')} Executes safe bench commands
+    ${chalk.cyan('Allowed:')} version, status, list-apps, doctor, config
+    ${chalk.cyan('Example:')} bench_command --version
+
+${chalk.brightYellow('📁 File Operations:')}
+  ${chalk.green('list_files')} ${chalk.dim('<path> [--recursive]')}
+    ${chalk.dim('→')} Lists directory contents with file details
+    ${chalk.cyan('Examples:')}
+      list_files ./apps
+      list_files /home/frappe/frappe-bench --recursive
+      
+  ${chalk.green('read_file')} ${chalk.dim('<path> [--lines N]')}
+    ${chalk.dim('→')} Displays file contents with optional line limiting
+    ${chalk.cyan('Examples:')}
+      read_file sites/common_site_config.json
+      read_file apps/erpnext/erpnext/hooks.py --lines 20
+
+${chalk.brightYellow('🖥️  Terminal Commands:')}
+  ${chalk.green('help')}      Show this comprehensive help
+  ${chalk.green('clear')}     Clear screen with welcome message  
+  ${chalk.green('status')}    Display connection and system status
+  ${chalk.green('Tab')}       Quick command reference table
+
+${chalk.brightYellow('⌨️  Keyboard Shortcuts:')}
+  ${chalk.cyan('↑/↓')}         Navigate command history
+  ${chalk.cyan('Tab')}         Show available commands
+  ${chalk.cyan('Ctrl+C')}      Cancel current command
+  ${chalk.cyan('Ctrl+L')}      Clear screen
+  ${chalk.cyan('Ctrl+D')}      Exit (on empty line)
+
+${chalk.brightMagenta('💡 Advanced Features:')}
+  • ${chalk.green('Professional styling')} with color-coded output
+  • ${chalk.green('Loading spinners')} for long-running operations
+  • ${chalk.green('Progress bars')} for batch operations
+  • ${chalk.green('Error highlighting')} and categorization
+  • ${chalk.green('Table formatting')} for structured data
+  • ${chalk.green('Session persistence')} across re-connections
+
+${chalk.gray('━'.repeat(70))}
+${chalk.dim('Type any command above or press Tab for quick reference')}
 `;
 
-  terminal.write(help);
-  showPrompt(terminal);
+  terminal.write(helpContent);
+  showStyledPrompt(terminal);
 }
+
+// function showDetailedHelp(terminal) {
+//   const help = `\r\n\x1b[36m📖 ERPNext MCP Terminal - Detailed Help\x1b[0m\r\n
+// \x1b[33m📄 Document Operations:\x1b[0m
+//   \x1b[32mlist_doctypes\x1b[0m                     - List all available document types
+//   \x1b[32mget_document\x1b[0m <doctype> <name>     - Get specific document
+//     Example: get_document Customer "CUST-00001"
+//     Example: get_document "Sales Invoice" "SINV-2024-00001"
+
+//   \x1b[32msearch_documents\x1b[0m <doctype> <query> - Search documents
+//     Example: search_documents Customer "John Doe"
+//     Example: search_documents Item "laptop"
+
+// \x1b[33m🗄️  Database Operations:\x1b[0m
+//   \x1b[32mexecute_sql\x1b[0m <query>              - Execute SQL query (SELECT only)
+//     Example: execute_sql "SELECT name, customer_name FROM \`tabCustomer\` LIMIT 10"
+//     Example: execute_sql "SELECT COUNT(*) FROM \`tabSales Invoice\`"
+
+// \x1b[33m⚙️  System Operations:\x1b[0m
+//   \x1b[32mget_system_info\x1b[0m                   - Show system information
+//   \x1b[32mlist_files\x1b[0m <path>                 - List files in directory
+//   \x1b[32mstatus\x1b[0m                            - Show connection status
+
+// \x1b[33m🖥️  Terminal Commands:\x1b[0m
+//   \x1b[32mhelp\x1b[0m          - Show this help        \x1b[32mclear\x1b[0m    - Clear screen
+//   \x1b[32mTab\x1b[0m           - Show quick commands    \x1b[32m↑/↓\x1b[0m      - Command history
+//   \x1b[32mCtrl+C\x1b[0m        - Cancel command         \x1b[32mCtrl+L\x1b[0m   - Clear screen
+
+// \x1b[33m💡 Pro Tips:\x1b[0m
+//   • Use quotes for names with spaces: get_document "Sales Invoice" "SINV-001"
+//   • Press Tab to see available commands quickly
+//   • Use arrow keys to navigate command history
+//   • Type 'status' to check system connection
+// `;
+
+//   terminal.write(help);
+//   showPrompt(terminal);
+// }
+
+// function showSystemStatus(terminal) {
+//   const user = frappe?.session?.user || 'Unknown';
+//   const site = frappe?.boot?.sitename || 'Unknown';
+//   const version = frappe?.boot?.versions?.frappe || 'Unknown';
+
+//   const status = `\r\n\x1b[36m📊 System Status\x1b[0m\r\n
+// \x1b[90m┌─────────────────────────────────────────────────────────────────┐\x1b[0m
+// \x1b[90m│\x1b[0m \x1b[33mConnection:\x1b[0m \x1b[32m●\x1b[0m Connected                               \x1b[90m│\x1b[0m
+// \x1b[90m│\x1b[0m \x1b[33mUser:\x1b[0m       ${user.padEnd(47)} \x1b[90m│\x1b[0m
+// \x1b[90m│\x1b[0m \x1b[33mSite:\x1b[0m       ${site.padEnd(47)} \x1b[90m│\x1b[0m
+// \x1b[90m│\x1b[0m \x1b[33mVersion:\x1b[0m    Frappe ${version.padEnd(39)} \x1b[90m│\x1b[0m
+// \x1b[90m│\x1b[0m \x1b[33mTime:\x1b[0m       ${new Date().toLocaleString().padEnd(47)} \x1b[90m│\x1b[0m
+// \x1b[90m└─────────────────────────────────────────────────────────────────┘\x1b[0m
+// `;
+
+//   terminal.write(status);
+//   showPrompt(terminal);
+// }
 
 function showSystemStatus(terminal) {
   const user = frappe?.session?.user || 'Unknown';
   const site = frappe?.boot?.sitename || 'Unknown';
   const version = frappe?.boot?.versions?.frappe || 'Unknown';
+  const currentTime = new Date().toLocaleString();
 
-  const status = `\r\n\x1b[36m📊 System Status\x1b[0m\r\n
-\x1b[90m┌─────────────────────────────────────────────────────────────────┐\x1b[0m
-\x1b[90m│\x1b[0m \x1b[33mConnection:\x1b[0m \x1b[32m●\x1b[0m Connected                               \x1b[90m│\x1b[0m
-\x1b[90m│\x1b[0m \x1b[33mUser:\x1b[0m       ${user.padEnd(47)} \x1b[90m│\x1b[0m
-\x1b[90m│\x1b[0m \x1b[33mSite:\x1b[0m       ${site.padEnd(47)} \x1b[90m│\x1b[0m
-\x1b[90m│\x1b[0m \x1b[33mVersion:\x1b[0m    Frappe ${version.padEnd(39)} \x1b[90m│\x1b[0m
-\x1b[90m│\x1b[0m \x1b[33mTime:\x1b[0m       ${new Date().toLocaleString().padEnd(47)} \x1b[90m│\x1b[0m
-\x1b[90m└─────────────────────────────────────────────────────────────────┘\x1b[0m
-`;
+  // Create professional status display
+  const statusData = [
+    ['Connection', chalk.chain().green().bold().apply('● Connected')],
+    ['User', chalk.cyan(user)],
+    ['Site', chalk.cyan(site)],
+    ['Frappe Version', chalk.yellow(version)],
+    ['Session Time', chalk.dim(currentTime)],
+    ['Terminal Features', chalk.green('Professional Mode ✨')],
+  ];
 
-  terminal.write(status);
-  showPrompt(terminal);
+  const statusTable = TerminalBox.table(statusData, {
+    style: 'double',
+    headers: ['Property', 'Value'],
+    colors: { header: 'brightMagenta' },
+  });
+
+  terminal.write(
+    '\r\n' + figlet.generate('STATUS', 'small', 'brightGreen') + '\r\n'
+  );
+  terminal.write(chalk.brightGreen(statusTable) + '\r\n');
+
+  showStyledPrompt(terminal);
 }
 
 // Auto-initialize if container exists

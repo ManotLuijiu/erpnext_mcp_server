@@ -1,6 +1,70 @@
 import subprocess
 
 import frappe
+import mcp.server.stdio
+import mcp.types as types
+from mcp.server.lowlevel import NotificationOptions, Server
+from mcp.server.models import InitializationOptions
+
+# Create a server instance
+server = Server("erpnext-mcp-server")
+
+print(f"server {server}")
+
+
+@server.list_prompts()
+async def handle_list_prompts() -> list[types.Prompt]:
+    return [
+        types.Prompt(
+            name="erpnext-mcp-prompt",
+            description="An ERPNext MCP prompt template",
+            arguments=[
+                types.PromptArgument(
+                    name="arg1", description="ERPNext MCP argument", required=True
+                )
+            ],
+        )
+    ]
+
+
+@server.get_prompt()
+async def handle_get_prompt(
+    name: str, arguments: dict[str, str] | None
+) -> types.GetPromptResult:
+    if name != "erpnext-mcp-prompt":
+        raise ValueError(f"Unknown prompt: {name}")
+
+    return types.GetPromptResult(
+        description="ERPNext MCP prompt",
+        messages=[
+            types.PromptMessage(
+                role="user",
+                content=types.TextContent(type="text", text="ERPNext MCP prompt text"),
+            )
+        ],
+    )
+
+
+async def run():
+    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="erpnext-mcp-server",
+                server_version="0.1.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={},
+                ),
+            ),
+        )
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(run())
 
 
 @frappe.whitelist()
@@ -8,7 +72,17 @@ def execute_terminal_command(command):
     """Execute terminal command and send realtime updates"""
     try:
         # Security check - only allow certain commands
-        allowed_commands = ["pwd", "ls", "whoami"]
+        allowed_commands = [
+            "pwd",
+            "ls",
+            "whoami",
+            "get_document",
+            "search_documents",
+            "execute_sql",
+            "list_files",
+            "bench_command",
+            "list_doctypes",
+        ]
         base_command = command.split()[0] if command else ""
 
         if base_command not in allowed_commands:

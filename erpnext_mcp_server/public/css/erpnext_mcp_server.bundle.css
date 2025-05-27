@@ -488,6 +488,7 @@
 
 .terminal.xterm {
   padding: 0 5px;
+  height: 100%;
 }
 
 .xterm .xterm-viewport {
