@@ -8,7 +8,7 @@ def execute_terminal_command(command):
     """Execute terminal command and send realtime updates"""
     try:
         # Security check - only allow certain commands
-        allowed_commands = ["pwd", "ls", "whoami", "data"]
+        allowed_commands = ["pwd", "ls", "whoami"]
         base_command = command.split()[0] if command else ""
 
         if base_command not in allowed_commands:
@@ -20,6 +20,7 @@ def execute_terminal_command(command):
                 },
                 user=frappe.session.user,
             )
+            frappe.msgprint(f"Command {base_command} not allowed")
             return {"success": False, "error": "Command not allowed"}
 
         # Echo the command
