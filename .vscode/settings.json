@@ -1,5 +1,5 @@
 {
-  "cSpell.words": ["polib", "tqdm"],
+  "cSpell.words": ["ollama", "polib", "tqdm"],
   "github.copilot.enable": {
     "*": false,
     "plaintext": false,

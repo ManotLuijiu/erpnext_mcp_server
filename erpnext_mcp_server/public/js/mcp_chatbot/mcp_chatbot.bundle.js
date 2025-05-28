@@ -7,6 +7,17 @@ import {
   TerminalProgress,
   TerminalBox,
 } from '../terminal_utils';
+import { library, dom } from '@fortawesome/fontawesome-svg-core';
+import {
+  faBars,
+  faClipboard,
+  faDownload,
+  faKey,
+  faCog,
+} from '@fortawesome/free-solid-svg-icons';
+
+library.add(faBars, faClipboard, faDownload, faKey, faCog);
+dom.watch();
 
 export const initMCPTerminal = async (containerId) => {
   try {
