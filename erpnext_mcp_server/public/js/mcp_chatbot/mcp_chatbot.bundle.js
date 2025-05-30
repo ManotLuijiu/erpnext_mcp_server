@@ -14,10 +14,715 @@ import {
   faDownload,
   faKey,
   faCog,
+  faServer,
+  faDatabase,
+  faTerminal,
 } from '@fortawesome/free-solid-svg-icons';
 
-library.add(faBars, faClipboard, faDownload, faKey, faCog);
+library.add(
+  faBars,
+  faClipboard,
+  faDownload,
+  faKey,
+  faCog,
+  faServer,
+  faDatabase,
+  faTerminal
+);
 dom.watch();
+
+// Terminal state management
+class TerminalState {
+  constructor() {
+    this.isProcessing = false;
+    this.currentSpinner = null;
+    this.commandHistory = [];
+    this.historyIndex = -1;
+    this.currentCommand = '';
+    this.mcpStatus = 'disconnected';
+    this.sessionInfo = null;
+  }
+
+  reset() {
+    this.isProcessing = false;
+    this.currentSpinner = null;
+    this.currentCommand = '';
+  }
+
+  addToHistory(command) {
+    if (
+      command.trim() &&
+      this.commandHistory[this.commandHistory.length - 1] !== command
+    ) {
+      this.commandHistory.push(command);
+      if (this.commandHistory.length > 100) {
+        this.commandHistory.shift();
+      }
+    }
+    this.historyIndex = -1;
+  }
+}
+
+export const initEnhancedMCPTerminal = async (containerId) => {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const container = document.getElementById(containerId);
+    if (!container) throw new Error(`Container ${containerId} not found`);
+    console.log('Initializing Enhanced MCP Terminal...', container);
+
+    // Initialize terminal state
+    const terminalState = new TerminalState();
+
+    // Initialize terminal with enhanced settings
+    const terminal = new Terminal({
+      convertEol: true,
+      disableStdin: false,
+      cursorBlink: true,
+      fontSize: 14,
+      fontFamily:
+        '"Cascadia Code", "Fira Code", "JetBrains Mono", "Courier New", monospace',
+      theme: {
+        background: '#0c0c0c',
+        foreground: '#cccccc',
+        cursor: '#00ff00',
+        cursorAccent: '#000000',
+        selection: '#404040',
+        black: '#000000',
+        red: '#cd3131',
+        green: '#0dbc79',
+        yellow: '#e5e510',
+        blue: '#2472c8',
+        magenta: '#bc3fbc',
+        cyan: '#11a8cd',
+        white: '#e5e5e5',
+        brightBlack: '#666666',
+        brightRed: '#f14c4c',
+        brightGreen: '#23d18b',
+        brightYellow: '#f5f543',
+        brightBlue: '#3b8eea',
+        brightMagenta: '#d670d6',
+        brightCyan: '#29b8db',
+        brightWhite: '#ffffff',
+      },
+      cols: 120,
+      rows: 30,
+      scrollback: 2000,
+      tabStopWidth: 4,
+      allowProposedApi: true,
+    });
+
+    const fitAddon = new FitAddon();
+    terminal.loadAddon(fitAddon);
+
+    const terminalElement = container.querySelector('#terminal');
+    if (!terminalElement) throw new Error('Terminal element not found');
+
+    terminal.open(terminalElement);
+    fitAddon.fit();
+
+    // Show enhanced welcome with MCP status
+    await showEnhancedWelcome(terminal);
+
+    // Initialize MCP server status
+    await checkMCPStatus(terminal, terminalState);
+
+    // Setup enhanced realtime listeners
+    setupEnhancedRealtimeListeners(terminal, terminalState);
+
+    // Handle terminal input with improved command processing
+    terminal.onData(async (data) => {
+      await handleTerminalInput(terminal, terminalState, data);
+    });
+
+    // Store terminal globally for utilities
+    window.mcpTerminal = terminal;
+    window.terminalState = terminalState;
+
+    // Auto-fit on resize
+    window.addEventListener('resize', () => {
+      fitAddon.fit();
+    });
+
+    return terminal;
+  } catch (error) {
+    console.error(`Enhanced terminal initialization failed: ${error}`);
+    throw error;
+  }
+};
+
+async function showEnhancedWelcome(terminal) {
+  const banner = figlet.banner('ERPNext MCP', {
+    font: 'block',
+    color: 'brightCyan',
+    border: true,
+    padding: 1,
+  });
+  const welcomeText = `
+    ${banner}
+
+    ${chalk.brightGreen('🚀 Enhanced ERPNext MCP Terminal')}
+    ${chalk.gray('━'.repeat(60))}
+
+    ${chalk.yellow('🔧 MCP Features:')}
+      ${chalk.green('•')} Document operations (list, get, search)
+      ${chalk.green('•')} Database queries (SELECT only for security)
+      ${chalk.green('•')} System information and bench commands
+      ${chalk.green('•')} File operations with safety restrictions
+      ${chalk.green('•')} Real-time command processing via MCP protocol
+
+    ${chalk.yellow('⚙️ Advanced Terminal:')}
+      ${chalk.green('•')} Professional CLI styling and formatting
+      ${chalk.green('•')} Loading spinners and progress indicators
+      ${chalk.green('•')} Command history and auto-completion
+      ${chalk.green('•')} Error handling and recovery
+      ${chalk.green('•')} Session persistence and status monitoring
+
+    ${chalk.yellow('📋 Quick Commands:')}
+      ${chalk.cyan('status')}        Show MCP server connection status
+      ${chalk.cyan('help')}          Comprehensive command reference
+      ${chalk.cyan('list_doctypes')} Browse available document types
+      ${chalk.cyan('get_system_info')} System and platform information
+
+    ${chalk.brightMagenta('🔑 Keyboard Shortcuts:')}
+      • ${chalk.cyan('↑/↓')} arrows for command history
+      • ${chalk.cyan('Tab')} for available commands
+      • ${chalk.cyan('Ctrl+C')} to cancel operations
+      • ${chalk.cyan('Ctrl+L')} for screen clear
+
+    ${chalk.gray('━'.repeat(60))}
+    ${chalk.dim('Connecting to MCP server...')}
+  `;
+
+  terminal.write(welcomeText);
+}
+
+async function checkMCPStatus(terminal, terminalState) {
+  try {
+    const response = await frappe.call({
+      method: 'erpnext_mcp_server.api.vue_mcp_server.get_terminal_status',
+    });
+
+    if (response.message && response.message.success) {
+      terminalState.mcpStatus = response.message.status;
+      terminalState.sessionInfo = response.message;
+
+      const statusColor =
+        response.message.status === 'connected'
+          ? 'brightGreen'
+          : 'brightYellow';
+      const statusText =
+        response.message.status === 'connected' ? 'CONNECTED' : 'STARTING';
+
+      terminal.write(
+        `\r\n${chalk.chain()[statusColor]().bold().apply(`🔗 MCP SERVER ${statusText}`)}\r\n`
+      );
+
+      if (response.message.status === 'disconnected') {
+        terminal.write(
+          `${chalk.dim('Initializing MCP server for session...')}\r\n`
+        );
+        await startMCPServer(terminal, terminalState);
+      }
+    } else {
+      terminal.write(
+        `\r\n${chalk.chain().red().bold().apply('❌ MCP SERVER ERROR')}\r\n`
+      );
+    }
+  } catch (error) {
+    terminal.write(
+      `\r\n${chalk.chain().red().bold().apply('❌ CONNECTION ERROR:')} ${chalk.red(error.message || 'Unknown error')}\r\n`
+    );
+  }
+
+  showEnhancedPrompt(terminal, terminalState);
+}
+
+async function startMCPServer(terminal, terminalState) {
+  const spinner = new ora({
+    text: 'Starting MCP server...',
+    spinner: 'dots',
+    color: 'cyan',
+    terminal: terminal,
+  });
+
+  spinner.start();
+
+  try {
+    const response = await frappe.call({
+      method: 'erpnext_mcp_server.api.vue_mcp_server.start_mcp_server',
+    });
+    if (response.message && response.message.success) {
+      spinner.succeed('MCP server started successfully');
+      terminalState.mcpStatus = 'connected';
+    } else {
+      spinner.fail('Failed to start MCP server');
+    }
+  } catch (error) {
+    spinner.fail(`MCP server error: ${error.message}`);
+  }
+}
+
+function showEnhancedPrompt(terminal, terminalState) {
+  if (!terminal) return;
+
+  const user = frappe?.session?.user || 'user';
+  const site = frappe?.boot?.sitename || 'erpnext';
+  const timestamp = new Date().toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  // Enhanced status indicators
+  const statusIcon =
+    terminalState.mcpStatus === 'connected'
+      ? chalk.brightGreen('●')
+      : chalk.brightRed('●');
+
+  const mcpIndicator =
+    terminalState.mcpStatus === 'connected'
+      ? chalk.dim('[MCP:ON]')
+      : chalk.dim('[MCP:OFF]');
+
+  const userInfo = chalk.chain().cyan().bold().apply(`${user}@${site}`);
+  const timeInfo = chalk.dim(`[${timestamp}]`);
+  const pathInfo = chalk.brightBlue('~/frappe-bench/sites');
+  const promptSymbol = chalk.chain().green().bold().apply('❯');
+
+  terminal.write(
+    `\r\n${statusIcon} ${userInfo} ${mcpIndicator} ${timeInfo}\r\n`
+  );
+  terminal.write(`${chalk.dim('┌─')} ${pathInfo}\r\n`);
+  terminal.write(`${chalk.dim('└─')} ${promptSymbol} `);
+}
+
+async function handleTerminalInput(terminal, terminalState, data) {
+  if (terminalState.isProcessing && terminalState.currentSpinner) return;
+
+  const code = data.charCodeAt(0);
+
+  switch (code) {
+    case 13: // Enter
+      if (terminalState.currentCommand.trim()) {
+        terminalState.addToHistory(terminalState.currentCommand);
+        await executeEnhancedCommand(
+          terminal,
+          terminalState,
+          terminalState.currentCommand.trim()
+        );
+        terminalState.isProcessing = true;
+      } else {
+        terminal.write('\r\n');
+        showEnhancedPrompt(terminal, terminalState);
+      }
+      terminalState.currentCommand = '';
+      break;
+
+    case 127: // Backspace
+      if (terminalState.currentCommand.length > 0) {
+        terminalState.currentCommand = terminalState.currentCommand.slice(
+          0,
+          -1
+        );
+        terminal.write('\b \b');
+      }
+      break;
+
+    case 3: // Ctrl+C
+      if (terminalState.currentSpinner) {
+        terminalState.currentSpinner.fail('Operation cancelled');
+        terminalState.currentSpinner = null;
+        terminalState.isProcessing = false;
+      }
+      terminal.write(chalk.red('^C') + '\r\n');
+      terminalState.currentCommand = '';
+      showEnhancedPrompt(terminal, terminalState);
+      break;
+
+    case 12: // Ctrl+L
+      terminal.clear();
+      await showEnhancedWelcome(terminal);
+      showEnhancedPrompt(terminal, terminalState);
+      break;
+
+    case 9: // Tab
+      showEnhancedCommandsHelp(terminal, terminalState);
+      break;
+
+    default:
+      // Handle arrow keys
+      if (data === '\x1b[A' && terminalState.commandHistory.length > 0) {
+        // Up arrow
+        if (
+          terminalState.historyIndex <
+          terminalState.commandHistory.length - 1
+        ) {
+          terminalState.historyIndex++;
+          const command =
+            terminalState.commandHistory[
+              terminalState.commandHistory.length -
+                1 -
+                terminalState.historyIndex
+            ];
+          replaceCurrentLine(terminal, terminalState, command);
+          terminalState.currentCommand = command;
+        }
+      } else if (data === '\x1b[B' && terminalState.commandHistory.length > 0) {
+        // Down arrow
+        if (terminalState.historyIndex > 0) {
+          terminalState.historyIndex--;
+          const command =
+            terminalState.commandHistory[
+              terminalState.commandHistory.length -
+                1 -
+                terminalState.historyIndex
+            ];
+          replaceCurrentLine(terminal, terminalState, command);
+          terminalState.currentCommand = command;
+        } else if (terminalState.historyIndex === 0) {
+          terminalState.historyIndex = -1;
+          replaceCurrentLine(terminal, terminalState, '');
+          terminalState.currentCommand = '';
+        }
+      } else if (code >= 32 && code <= 126) {
+        // Printable characters
+        terminalState.currentCommand += data;
+        terminal.write(data);
+      }
+  }
+}
+
+function replaceCurrentLine(terminal, terminalState, newCommand) {
+  terminal.write('\r\x1b[K');
+  showEnhancedPrompt(terminal, terminalState);
+  terminal.write(newCommand);
+}
+
+async function executeEnhancedCommand(terminal, terminalState, command) {
+  if (!command.trim()) return;
+
+  const lowerCommand = command.toLowerCase().trim();
+
+  // Handle built-in commands
+  if (lowerCommand === 'clear' || lowerCommand === 'cls') {
+    terminal.clear();
+    await showEnhancedWelcome(terminal);
+    return;
+  }
+
+  if (lowerCommand === 'help') {
+    showDetailedMCPHelp(terminal, terminalState);
+    return;
+  }
+
+  if (lowerCommand === 'status') {
+    await showMCPStatus(terminal, terminalState);
+    return;
+  }
+
+  // Show command execution with professional feedback
+  terminal.write(
+    `\r\n${chalk.dim('▶')} ${chalk.brightYellow(`Executing: ${command}`)}\r\n`
+  );
+
+  // Create spinner for MCP command
+  const spinner = new ora({
+    text: `Processing MCP command: ${command}`,
+    spinner: 'dots',
+    color: 'cyan',
+    terminal: terminal,
+  });
+
+  spinner.start();
+  terminalState.currentSpinner = spinner;
+
+  // Send command to MCP server via Frappe API
+  try {
+    const response = await frappe.call({
+      method: 'erpnext_mcp_server.api.vue_mcp_server.execute_terminal_command',
+      args: { command: command },
+    });
+
+    if (response && response.message && response.message.success) {
+      spinner.succeed('Command sent to MCP server');
+    } else {
+      spinner.warn('Command sent with warnings');
+    }
+  } catch (error) {
+    console.error(`Command execution failed: ${error}`);
+    spinner.fail(`Error: ${error.message || 'Command execution failed'}`);
+    terminal.write(
+      `\r\n${chalk.chain().red().bold().apply('❌ EXECUTION ERROR:')} ${chalk.red(error.message)}\r\n`
+    );
+    showEnhancedPrompt(terminal, terminalState);
+  }
+  terminalState.currentSpinner = null;
+}
+
+function setupEnhancedRealtimeListeners(terminal, terminalState) {
+  // Enhanced terminal output listener
+  frappe.realtime.on('terminal_output', (message) => {
+    if (terminalState.currentSpinner) {
+      terminalState.currentSpinner.stop();
+      terminalState.currentSpinner = null;
+    }
+
+    terminalState.isProcessing = false;
+
+    switch (message.type) {
+      case 'command':
+        terminal.write(
+          `\r\n${chalk.dim('▶')} ${chalk.brightYellow(message.data)}\r\n`
+        );
+        break;
+
+      case 'stdout': {
+        const formattedOutput = formatMCPOutput(message.data);
+        terminal.write(`\r\n${formattedOutput}\r\n`);
+        break;
+      }
+
+      case 'stderr':
+        terminal.write(
+          `\r\n${chalk.chain().red().bold().apply('❌ ERROR:')} ${chalk.red(message.data)}\r\n`
+        );
+        break;
+
+      case 'success':
+        terminal.write(
+          `\r\n${chalk.chain().green().bold().apply('✅ SUCCESS:')} ${chalk.brightGreen(message.data)}\r\n`
+        );
+        break;
+
+      case 'info':
+        terminal.write(
+          `\r\n${chalk.chain().blue().bold().apply('ℹ️  INFO:')} ${chalk.cyan(message.data)}\r\n`
+        );
+        break;
+
+      case 'warning':
+        terminal.write(
+          `\r\n${chalk.chain().yellow().bold().apply('⚠️  WARNING:')} ${chalk.yellow(message.data)}\r\n`
+        );
+        break;
+
+      case 'progress':
+        if (message.current !== undefined && message.total !== undefined) {
+          showProgressBar(
+            terminal,
+            message.current,
+            message.total,
+            message.label
+          );
+          return;
+        }
+        break;
+
+      default:
+        terminal.write(`\r\n${message.data}\r\n`);
+    }
+
+    showEnhancedPrompt(terminal, terminalState);
+  });
+
+  // Enhanced MCP status listener
+  frappe.realtime.on('mcp_status', (message) => {
+    terminalState.mcpStatus = message.status;
+
+    switch (message.status) {
+      case 'connected':
+        terminal.write(
+          `\r\n${chalk.chain().green().bold().apply('🟢 MCP CONNECTED:')} Server online and ready\r\n`
+        );
+        break;
+      case 'disconnected':
+        terminal.write(
+          `\r\n${chalk.chain().red().bold().apply('🔴 MCP DISCONNECTED:')} Server offline\r\n`
+        );
+        break;
+      case 'error':
+        terminal.write(
+          `\r\n${chalk.chain().red().bold().apply('❌ MCP ERROR:')} ${chalk.red(message.error)}\r\n`
+        );
+        break;
+      case 'reconnecting':
+        terminal.write(
+          `\r\n${chalk.chain().yellow().bold().apply('🔄 MCP RECONNECTING:')} Attempting to restore connection\r\n`
+        );
+        break;
+    }
+
+    showEnhancedPrompt(terminal, terminalState);
+  });
+}
+
+function formatMCPOutput(data) {
+  if (typeof data === 'string') {
+    return (
+      data
+        // Highlight MCP-specific patterns
+        .replace(/^(📋|📄|🔍|📊|🖥️|📁|🔧|⚙️|🗄️)/gm, chalk.brightCyan('$1'))
+        .replace(/^(✅|❌|⚠️|ℹ️)/gm, (match) => {
+          switch (match) {
+            case '✅':
+              return chalk.brightGreen(match);
+            case '❌':
+              return chalk.brightRed(match);
+            case '⚠️':
+              return chalk.brightYellow(match);
+            case 'ℹ️':
+              return chalk.brightBlue(match);
+            default:
+              return match;
+          }
+        })
+        // Highlight structural elements
+        .replace(/^(═+|─+)/gm, chalk.dim('$1'))
+        .replace(/^(\s+•)/gm, chalk.green('$1'))
+        .replace(/(\w+:)/g, chalk.yellow('$1'))
+        .replace(/(".*?")/g, chalk.brightMagenta('$1'))
+        .replace(/(\d+)/g, chalk.brightBlue('$1'))
+        // Highlight ERPNext-specific terms
+        .replace(
+          /(Customer|Sales Invoice|Item|DocType)/g,
+          chalk.brightCyan('$1')
+        )
+        .replace(
+          /(SELECT|FROM|WHERE|ORDER BY|LIMIT)/g,
+          chalk.brightMagenta('$1')
+        )
+    );
+  }
+
+  if (typeof data === 'object') {
+    try {
+      return chalk.dim(JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error(error);
+      return String(data);
+    }
+  }
+
+  return String(data);
+}
+
+function showEnhancedCommandsHelp(terminal, terminalState) {
+  terminal.write('\r\n');
+
+  const commands = [
+    ['help', 'Show comprehensive help with examples'],
+    ['status', 'Display MCP server and system status'],
+    ['list_doctypes [module]', 'List document types, optionally by module'],
+    ['get_document <type> <name>', 'Retrieve specific document'],
+    ['search_documents <type> <query>', 'Search documents with filters'],
+    ['execute_sql "<query>"', 'Execute SQL SELECT queries safely'],
+    ['get_system_info', 'Show system and platform information'],
+    ['bench_command <cmd>', 'Execute safe bench commands'],
+    ['list_files <path> [--recursive]', 'List directory contents'],
+    ['read_file <path> [--lines N]', 'Display file contents'],
+    ['clear', 'Clear terminal screen'],
+  ];
+
+  const table = TerminalBox.table(commands, {
+    style: 'rounded',
+    headers: ['Command', 'Description'],
+    colors: { header: 'brightCyan' },
+  });
+
+  terminal.write(chalk.cyan(table) + '\r\n\r\n');
+
+  // Add MCP-specific examples
+  const examples = `${chalk.yellow('🚀 MCP Command Examples:')}
+
+${chalk.cyan('Document Operations:')}
+  get_document Customer "CUST-00001"
+  search_documents "Sales Invoice" "pending" --limit 5
+  list_doctypes Selling
+
+${chalk.cyan('Database Queries:')}
+  execute_sql "SELECT name, customer_name FROM \`tabCustomer\` LIMIT 10"
+  execute_sql "SELECT COUNT(*) as total FROM \`tabItem\`"
+
+${chalk.cyan('System Operations:')}
+  bench_command version
+  get_system_info
+  list_files ./apps --recursive`;
+
+  const exampleBox = TerminalBox.create(examples, {
+    style: 'single',
+    color: 'brightYellow',
+    padding: 1,
+    title: 'MCP Examples',
+  });
+
+  terminal.write(exampleBox + '\r\n');
+  showEnhancedPrompt(terminal, terminalState);
+}
+
+async function showMCPStatus(terminal, terminalState) {
+  try {
+    const response = await frappe.call({
+      method: 'erpnext_mcp_server.api.vue_mcp_server.get_terminal_status',
+    });
+
+    if (response.message && response.message.success) {
+      const status = response.message;
+      const connectionStatus =
+        status.status === 'connected'
+          ? chalk.chain().green().bold().apply('● CONNECTED')
+          : chalk.chain().red().bold().apply('● DISCONNECTED');
+
+      const statusData = [
+        ['MCP Server', connectionStatus],
+        ['Session', chalk.cyan(status.session || 'N/A')],
+        ['User', chalk.cyan(status.user)],
+        ['Site', chalk.cyan(status.site)],
+        ['Protocol', chalk.yellow('JSON-RPC over stdio')],
+        ['Transport', chalk.yellow('Frappe Realtime (socket.io)')],
+        ['Security', chalk.green('✓ Enabled (whitelisted operations)')],
+      ];
+
+      const statusTable = TerminalBox.table(statusData, {
+        style: 'double',
+        headers: ['Component', 'Status'],
+        colors: { header: 'brightMagenta' },
+      });
+
+      terminal.write(
+        '\r\n' + figlet.generate('STATUS', 'small', 'brightGreen') + '\r\n'
+      );
+      terminal.write(chalk.brightGreen(statusTable) + '\r\n');
+
+      // Add performance metrics if available
+      const perfData = [
+        ['Commands Executed', terminalState.commandHistory.length.toString()],
+        ['Session Duration', 'Active'],
+        ['Last Activity', new Date().toLocaleTimeString()],
+      ];
+
+      const perfTable = TerminalBox.table(perfData, {
+        style: 'single',
+        headers: ['Metric', 'Value'],
+        colors: { header: 'brightBlue' },
+      });
+
+      terminal.write('\r\n' + chalk.brightBlue('📊 Session Metrics') + '\r\n');
+      terminal.write(perfTable + '\r\n');
+    } else {
+      terminal.write(
+        `\r\n${chalk.chain().red().bold().apply('❌ STATUS ERROR:')} Unable to retrieve MCP status\r\n`
+      );
+    }
+  } catch (error) {
+    terminal.write(
+      `\r\n${chalk.chain().red().bold().apply('❌ CONNECTION ERROR:')} ${chalk.red(error.message)}\r\n`
+    );
+  }
+
+  showEnhancedPrompt(terminal, terminalState);
+}
 
 export const initMCPTerminal = async (containerId) => {
   try {
@@ -418,13 +1123,13 @@ function showStyledPrompt(terminal) {
 //   showPrompt(terminal);
 // }
 
-function replaceCurrentLine(terminal, newCommand) {
-  // Move to beginning of line and clear it
-  terminal.write('\r\x1b[K');
-  showStyledPrompt(terminal);
-  // showPrompt(terminal);
-  terminal.write(newCommand);
-}
+// function replaceCurrentLine(terminal, newCommand) {
+//   // Move to beginning of line and clear it
+//   terminal.write('\r\x1b[K');
+//   showStyledPrompt(terminal);
+//   // showPrompt(terminal);
+//   terminal.write(newCommand);
+// }
 
 // let isPromptVisible = false;
 
@@ -623,7 +1328,7 @@ function formatProfessionalOutput(data) {
 function showProgressBar(terminal, current, total, label = 'Progress') {
   const progress = new TerminalProgress(total, {
     terminal: terminal,
-    width: 30,
+    width: 40,
     format: `${chalk.cyan(label)}: {bar} {percentage}% ({current}/{total})`,
     complete: '█',
     incomplete: '░',
@@ -965,11 +1670,17 @@ function showSystemStatus(terminal) {
 document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('mcp-terminal-app');
   if (container) {
-    initMCPTerminal('mcp-terminal-app').catch((err) => {
-      console.error('Failed to initialize terminal:', err);
+    initEnhancedMCPTerminal('mcp-terminal-app').catch((err) => {
+      console.error(`Failed to initialize enhanced MCP terminal: ${err}`);
     });
   }
+  // if (container) {
+  //   initMCPTerminal('mcp-terminal-app').catch((err) => {
+  //     console.error('Failed to initialize terminal:', err);
+  //   });
+  // }
 });
 
 // Export for manual initialization
-window.initMCPTerminal = initMCPTerminal;
+// window.initMCPTerminal = initMCPTerminal;
+window.initEnhancedMCPTerminal = initEnhancedMCPTerminal;

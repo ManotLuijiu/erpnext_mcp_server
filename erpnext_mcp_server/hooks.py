@@ -185,9 +185,10 @@ after_install = "erpnext_mcp_server.install.after_install"
 # }
 
 doc_events = {
-    "Item": {
-        "on_update": "erpnext_mcp_server.handlers.item_socketio_connector.delivery_slip_connector_socketio"
-    }
+    "*": {"on_update": "erpnext_mcp_server.api.vue_mcp_server.cleanup_mcp_processes"},
+    # "Item": {
+    #     "on_update": "erpnext_mcp_server.handlers.item_socketio_connector.delivery_slip_connector_socketio"
+    # }
 }
 
 on_redis_event = {
@@ -310,4 +311,9 @@ website_route_rules = [
     },
 ]
 
-website_route_rules = [{'from_route': '/ai-chatbot-terminal/<path:app_path>', 'to_route': 'ai-chatbot-terminal'},]
+website_route_rules = [
+    {
+        "from_route": "/ai-chatbot-terminal/<path:app_path>",
+        "to_route": "ai-chatbot-terminal",
+    },
+]

@@ -18,7 +18,7 @@ frappe.pages['mcp-chatbot'].on_page_load = function (wrapper) {
 
   // Initialize terminal
   frappe.require('mcp_chatbot.bundle.js').then(() => {
-    window.initMCPTerminal('mcp-terminal-app').catch((error) => {
+    window.initEnhancedMCPTerminal('mcp-terminal-app').catch((error) => {
       container.html(`
         <div class="error-message">
           Failed to load terminal: ${error.message}
