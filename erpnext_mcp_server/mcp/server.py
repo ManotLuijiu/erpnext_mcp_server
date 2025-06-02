@@ -17,6 +17,7 @@ from frappe.utils import get_site_name
 from mcp.server.lowlevel import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
 
+from .config import mcp_config, setup_mcp_server, validate_mcp_environment
 from .tools.database_tools import DatabaseTools
 from .tools.document_tools import DocumentTools
 from .tools.file_tools import FileTools
@@ -26,30 +27,50 @@ from .tools.system_tools import SystemTools
 @asynccontextmanager
 async def server_lifespan(server: Server) -> AsyncIterator[Dict[str, Any]]:
     """Manage server startup and shutdown lifecycle."""
+    print(f"server {server}")
+
+    # Validate environment using config
+    validate_mcp_environment()
+
+    # Setup MCP server with config
+    config = setup_mcp_server()
+
+    print(f"config server.py {config}")
+
     # Initialize resources on startup
     site_name = get_site_name(
         frappe.local.request.host if frappe.local.request else None
     )
 
-    # Initialize Frappe context
-    if not frappe.db:
-        frappe.init(site=site_name)
-        frappe.connect()
+    print(f"site_name server.py {site_name}")
 
     # Initialize Frappe context
     if not frappe.db:
         frappe.init(site=site_name)
         frappe.connect()
 
-    # Initialize tool classes
-    document_tools = DocumentTools()
-    database_tools = DatabaseTools()
-    system_tools = SystemTools()
-    file_tools = FileTools()
+    # Initialize Frappe context
+    if not frappe.db:
+        frappe.init(site=site_name)
+        frappe.connect()
+
+    # Initialize tool classes with config
+    document_tools = DocumentTools(config)
+    print(f"document_tools {document_tools}")
+
+    database_tools = DatabaseTools(config)
+    print(f"database_tools {database_tools}")
+
+    system_tools = SystemTools(config)
+    print(f"system_tools {system_tools}")
+
+    file_tools = FileTools(config)
+    print(f"file_tools {file_tools}")
 
     context = {
         "db": frappe.db,
         "site_name": site_name,
+        "config": config,
         "document_tools": document_tools,
         "database_tools": database_tools,
         "system_tools": system_tools,
@@ -65,12 +86,23 @@ async def server_lifespan(server: Server) -> AsyncIterator[Dict[str, Any]]:
 
 
 # Create server instance
-server = Server("erpnext-mcp-server", lifespan=server_lifespan)
+# server = Server("erpnext-mcp-server", lifespan=server_lifespan)
+server = Server(
+    mcp_config.server_name, version=mcp_config.server_version, lifespan=server_lifespan
+)
+
+print(f"server after create server {server}")
 
 
 @server.list_tools()
 async def handle_list_tools() -> List[types.Tool]:
-    """List all available tools."""
+    """List all available tools with configuration-aware descriptions."""
+    ctx = server.request_context
+    print(f"ctx {ctx}")
+
+    config = ctx.lifespan_context["config"]
+    print(f"config {config}")
+
     return [
         # Document operations
         types.Tool(
@@ -123,8 +155,8 @@ async def handle_list_tools() -> List[types.Tool]:
                     },
                     "limit": {
                         "type": "integer",
-                        "default": 20,
-                        "description": "Maximum number of results to return",
+                        "default": config.sql_query_limit,
+                        "description": f"Maximum number of results to return (max: {config.sql_query_limit})",
                     },
                     "fields": {
                         "type": "array",
@@ -135,10 +167,10 @@ async def handle_list_tools() -> List[types.Tool]:
                 "required": ["doctype"],
             },
         ),
-        # Database operations
+        # Database operations with config limits
         types.Tool(
             name="execute_sql",
-            description="Execute SQL queries (SELECT only for security)",
+            description=f"Execute SQL queries (SELECT only for security, max {config.sql_query_limit} rows)",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -148,14 +180,14 @@ async def handle_list_tools() -> List[types.Tool]:
                     },
                     "limit": {
                         "type": "integer",
-                        "default": 100,
-                        "description": "Maximum number of rows to return",
+                        "default": config.sql_query_limit,
+                        "description": f"Maximum number of rows to return (max: {config.sql_query_limit})",
                     },
                 },
                 "required": ["query"],
             },
         ),
-        # System operations
+        # System operations with allowed commands from config
         types.Tool(
             name="get_system_info",
             description="Get comprehensive system information including versions, database details, and platform info",
@@ -163,13 +195,14 @@ async def handle_list_tools() -> List[types.Tool]:
         ),
         types.Tool(
             name="bench_command",
-            description="Execute safe bench commands for system management",
+            description=f"Execute safe bench commands: {', '.join(config.allowed_bench_commands.keys())}",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "command": {
                         "type": "string",
-                        "description": "Bench command to execute (e.g., 'version', 'status', 'list-apps')",
+                        "enum": list(config.allowed_bench_commands.keys()),
+                        "description": f"Allowed commands: {', '.join(config.allowed_bench_commands.keys())}",
                     },
                     "args": {
                         "type": "array",
@@ -180,14 +213,17 @@ async def handle_list_tools() -> List[types.Tool]:
                 "required": ["command"],
             },
         ),
-        # File operations
+        # File operations with config restrictions
         types.Tool(
             name="list_files",
-            description="List files and directories with detailed information",
+            description=f"List files in allowed directories: {', '.join(config.safe_directories)}",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "Directory path to list"},
+                    "path": {
+                        "type": "string",
+                        "description": f"Directory path (restricted to: {', '.join(config.safe_directories)})",
+                    },
                     "recursive": {
                         "type": "boolean",
                         "default": False,
@@ -203,7 +239,7 @@ async def handle_list_tools() -> List[types.Tool]:
         ),
         types.Tool(
             name="read_file",
-            description="Read and display file contents with syntax awareness",
+            description=f"Read files (max {config.max_file_size // (1024*1024)}MB, types: {', '.join(sorted(config.allowed_file_extensions))})",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -228,8 +264,9 @@ async def handle_list_tools() -> List[types.Tool]:
 async def handle_call_tool(
     name: str, arguments: Dict[str, Any]
 ) -> List[types.TextContent]:
-    """Handle tool execution."""
+    """Handle tool execution with configuration-aware processing."""
     ctx = server.request_context
+    print(f"ctx {ctx}")
 
     try:
         if name == "list_doctypes":
@@ -245,12 +282,13 @@ async def handle_call_tool(
                 arguments["doctype"],
                 arguments.get("query"),
                 arguments.get("filters", {}),
-                arguments.get("limit", 20),
+                arguments.get("limit", ctx.lifespan_context["config"].sql_query_limit),
                 arguments.get("fields"),
             )
         elif name == "execute_sql":
             result = await ctx.lifespan_context["database_tools"].execute_sql(
-                arguments["query"], arguments.get("limit", 100)
+                arguments["query"],
+                arguments.get("limit", ctx.lifespan_context["config"].sql_query_limit),
             )
         elif name == "get_system_info":
             result = await ctx.lifespan_context["system_tools"].get_system_info()
@@ -276,18 +314,24 @@ async def handle_call_tool(
         return [types.TextContent(type="text", text=str(result))]
     except Exception as e:
         error_msg = f"Error executing {name}: {str(e)}"
+        if ctx.lifespan_context["config"].is_development_mode():
+            # In development mode, include more detailed error info
+            import traceback
+
+            error_msg += f"\n\nDevelopment Debug Info:\n{traceback.format_exc()}"
+
         return [types.TextContent(type="text", text=error_msg)]
 
 
 async def run_server():
-    """Main server run function"""
+    """Main server run function with configuration."""
     async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
         await server.run(
             read_stream,
             write_stream,
             InitializationOptions(
-                server_name="erpnext-mcp-server",
-                server_version="1.0.0.",
+                server_name=mcp_config.server_name,
+                server_version=mcp_config.server_version,
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},

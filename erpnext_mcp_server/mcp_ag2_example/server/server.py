@@ -43,6 +43,8 @@ class ERPNextMCPServer:
         Args:
             site_name (_type_, optional): _description_. Defaults to None.
         """
+
+        print(f"site_name __init__ server.poy {site_name}")
         if self._initialized:
             return
 
@@ -109,10 +111,10 @@ class ERPNextMCPServer:
             resources = []
 
             # Add ERPNext DocTypes as resources
-            doctyp_list = self._run_in_frappe(
+            doctype_list = self._run_in_frappe(
                 lambda: frappe.get_all("DocType", fields=["name"])
             )
-            for dt in doctyp_list:  # type: ignore
+            for dt in doctype_list:  # type: ignore
                 resources.append(
                     Resource(
                         uri=f"erp://doctype/{dt['name']}",  # type: ignore

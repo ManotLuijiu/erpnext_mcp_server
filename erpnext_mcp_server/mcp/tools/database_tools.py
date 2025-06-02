@@ -14,7 +14,8 @@ from frappe import _
 class DatabaseTools:
     """Tools for safe database operations."""
 
-    def __init__(self) -> None:
+    def __init__(self, config=None) -> None:
+        print(f"config DatabaseTools {config}")
         # Only allow SELECT statements for security
         self.allowed_sql_patterns = [
             r"^\s*SELECT\s+",

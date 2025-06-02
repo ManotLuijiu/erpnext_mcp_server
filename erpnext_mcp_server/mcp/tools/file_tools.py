@@ -1,5 +1,5 @@
 """
-File Tools for ERPNext MCP Server
+File Tools for ERPNext MCP Server with Configuration Integration
 Handles safe file system operations with security restrictions
 """
 
@@ -14,55 +14,70 @@ import frappe
 
 
 class FileTools:
-    """Tools for safe file operations."""
+    """Tools for safe file operations with configuration integration."""
 
-    def __init__(self):
+    def __init__(self, config=None):
+        print(f"config FileTools {config}")
+        # Use provided config or import default
+        if config is None:
+            from ..config import mcp_config
+
+            self.config = mcp_config
+        else:
+            self.config = config
+
         # Define safe directories (relative to site or bench)
-        self.safe_base_paths = [
-            frappe.get_site_path(),  # Current site directory
-            frappe.get_site_path(".."),  # Sites directory
-            frappe.get_site_path("../.."),  # Bench directory
-        ]
+        # self.safe_base_paths = [
+        #     frappe.get_site_path(),  # Current site directory
+        #     frappe.get_site_path(".."),  # Sites directory
+        #     frappe.get_site_path("../.."),  # Bench directory
+        # ]
 
         # Define safe subdirectories within allowed paths
-        self.safe_subdirs = [
-            "sites",
-            "apps",
-            "logs",
-            "config",
-            "env",
-            "public",
-            "private",
-            "backups",
-            "archives",
-        ]
+        # self.safe_subdirs = [
+        #     "sites",
+        #     "apps",
+        #     "logs",
+        #     "config",
+        #     "env",
+        #     "public",
+        #     "private",
+        #     "backups",
+        #     "archives",
+        # ]
 
         # File extensions that are safe to read
-        self.safe_extensions = {
-            ".txt",
-            ".md",
-            ".rst",
-            ".json",
-            ".yml",
-            ".yaml",
-            ".py",
-            ".js",
-            ".html",
-            ".css",
-            ".scss",
-            ".xml",
-            ".cfg",
-            ".conf",
-            ".ini",
-            ".log",
-            ".sql",
-        }
+        # self.safe_extensions = {
+        #     ".txt",
+        #     ".md",
+        #     ".rst",
+        #     ".json",
+        #     ".yml",
+        #     ".yaml",
+        #     ".py",
+        #     ".js",
+        #     ".html",
+        #     ".css",
+        #     ".scss",
+        #     ".xml",
+        #     ".cfg",
+        #     ".conf",
+        #     ".ini",
+        #     ".log",
+        #     ".sql",
+        # }
 
         # Maximum file size to read (10MB)
-        self.max_file_size = 10 * 1024 * 1024
+        # self.max_file_size = 10 * 1024 * 1024
+
+        # Use configuration settings
+        self.safe_base_paths = self.config.get_safe_base_paths()
+        self.safe_subdirs = self.config.safe_directories
+        self.safe_extensions = self.config.allowed_file_extensions
+        self.max_file_size = self.config.max_file_size
 
     def _is_safe_path(self, path: str) -> tuple[bool, str]:
-        """Check if path is safe to access."""
+        """Check if path is safe to access using configuration."""
         try:
             # Convert to absolute path
             abs_path = os.path.abspath(path)
@@ -78,7 +93,10 @@ class FileTools:
             if path_parts and path_parts[0] in self.safe_subdirs:
                 return True, "Path is in allowed subdirectory"
 
-            return False, "Path is outside allowed directories"
+            return (
+                False,
+                f"Path is outside allowed directories: {', '.join(self.safe_subdirs)}",
+            )
 
         except Exception as e:
             return False, f"Path validation error: {str(e)}"
@@ -131,9 +149,9 @@ class FileTools:
     async def list_files(
         self, path: str, recursive: bool = False, pattern: Optional[str] = None
     ) -> str:
-        """List files and directories with detailed information."""
+        """List files and directories with configuration-aware validation."""
         try:
-            # Security check
+            # Security check using config
             is_safe, message = self._is_safe_path(path)
             if not is_safe:
                 return f"❌ Access denied: {message}"
@@ -145,7 +163,13 @@ class FileTools:
             if not path_obj.is_dir():
                 return f"❌ Not a directory: {path}"
 
-            output = [f"📁 Directory Listing: {path}", "=" * (len(path) + 20), ""]
+            output = [
+                f"📁 Directory Listing: {path}",
+                "=" * (len(path) + 20),
+                f"📋 Config: Max file size {self.config.max_file_size // (1024*1024)}MB, "
+                f"Allowed extensions: {len(self.safe_extensions)} types",
+                "",
+            ]
 
             try:
                 # Get items
@@ -225,9 +249,9 @@ class FileTools:
     async def read_file(
         self, path: str, lines: Optional[int] = None, encoding: str = "utf-8"
     ) -> str:
-        """Read and display file contents."""
+        """Read and display file contents with configuration validation."""
         try:
-            # Security check
+            # Security check using config
             is_safe, message = self._is_safe_path(path)
             if not is_safe:
                 return f"❌ Access denied: {message}"
@@ -239,12 +263,15 @@ class FileTools:
             if not path_obj.is_file():
                 return f"❌ Not a file: {path}"
 
-            # Check file size
+            # Check file size using config
             file_size = path_obj.stat().st_size
             if file_size > self.max_file_size:
-                return f"❌ File too large: {self._format_file_size(file_size)} (max: {self._format_file_size(self.max_file_size)})"
+                return (
+                    f"❌ File too large: {self._format_file_size(file_size)} "
+                    f"(max: {self._format_file_size(self.max_file_size)})"
+                )
 
-            # Check file extension
+            # Check file extension using config
             if path_obj.suffix.lower() not in self.safe_extensions:
                 return f"❌ File type not allowed: {path_obj.suffix} (safe types: {', '.join(sorted(self.safe_extensions))})"
 

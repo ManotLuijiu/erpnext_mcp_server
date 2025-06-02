@@ -5,8 +5,9 @@ Configuration management and initialization for ERPNext MCP Server
 
 import os
 import sys
-import frappe
 from pathlib import Path
+
+import frappe
 
 
 class MCPConfig:
@@ -98,9 +99,11 @@ class MCPConfig:
 def setup_mcp_server():
     """Initialize MCP server setup."""
     config = MCPConfig()
+    print(f"config setup_mcp_server {config}")
 
     # Verify server script exists
     server_path = config.get_server_path()
+    print(f"server_path setup_mcp_server {server_path}")
     if not server_path.exists():
         frappe.throw(f"MCP server script not found: {server_path}")
 

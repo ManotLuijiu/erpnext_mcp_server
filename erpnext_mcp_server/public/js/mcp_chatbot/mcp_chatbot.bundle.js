@@ -440,9 +440,12 @@ async function executeEnhancedCommand(terminal, terminalState, command) {
 
   // Send command to MCP server via Frappe API
   try {
+    const user = frappe.session.user;
+    console.log('user', user);
+
     const response = await frappe.call({
       method: 'erpnext_mcp_server.api.vue_mcp_server.execute_terminal_command',
-      args: { command: command },
+      args: { command: command, user },
     });
 
     if (response && response.message && response.message.success) {
@@ -1393,9 +1396,10 @@ function executeCommandWithStyle(terminal, command) {
   window.mcpCurrentSpinner = spinner;
 
   // Send command to server
+  const user = frappe.session.user;
   frappe.call({
     method: 'erpnext_mcp_server.api.vue_mcp_server.execute_terminal_command',
-    args: { command: command },
+    args: { command: command, user },
     callback: (response) => {
       console.log('Command executed:', response);
 

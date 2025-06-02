@@ -14,7 +14,8 @@ from frappe.model.document import get_doc
 class DocumentTools:
     """Tools for ERPNext document operations."""
 
-    def __init__(self) -> None:
+    def __init__(self, config=None) -> None:
+        print(f"config DocumentTools {config}")
         self.safe_doctypes = self._get_safe_doctypes()
 
     def _get_safe_doctypes(self) -> List[str]:

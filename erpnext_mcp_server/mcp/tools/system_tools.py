@@ -18,7 +18,9 @@ from frappe.utils.change_log import get_versions
 class SystemTools:
     """Tools for system operations and information."""
 
-    def __init__(self):
+    def __init__(self, config=None):
+        print(f"config SystemTools {config}")
+        self.config = config
         # Only allow safe bench commands
         self.allowed_bench_commands = {
             "version": "Show bench and app versions",
