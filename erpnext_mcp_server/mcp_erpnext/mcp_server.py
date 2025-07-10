@@ -215,11 +215,11 @@ What are the key pieces of information in this document? What actions might be a
             return {"error": str(e)}
 
     async def search_documents(self, 
+                             ctx: Context,
                              doctype: str, 
                              filters: Optional[Dict[str, Any]] = None, 
                              fields: Optional[List[str]] = None,
-                             limit: int = 20,
-                             ctx: Context) -> Dict[str, Any]:
+                             limit: int = 20) -> Dict[str, Any]:
         """Search for documents of a specific doctype
         
         Args:
@@ -275,10 +275,10 @@ What are the key pieces of information in this document? What actions might be a
             return {"error": str(e)}
 
     async def list_files(self, 
+                       ctx: Context,
                        folder: str = "", 
                        extensions: Optional[List[str]] = None,
-                       limit: int = 50,
-                       ctx: Context) -> Dict[str, Any]:
+                       limit: int = 50) -> Dict[str, Any]:
         """List files in the ERPNext file store
         
         Args:

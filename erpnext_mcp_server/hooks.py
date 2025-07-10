@@ -22,7 +22,8 @@ navbar_items = [
 
 commands = [
     # {"name": "mcp", "function": "erpnext_mcp_server.commands.mcp"},
-    "erpnext_mcp_server.commands.mcp_dev.commands"
+    "erpnext_mcp_server.commands.mcp_dev.commands",
+    "erpnext_mcp_server.commands.mcp_terminal.commands"
 ]
 
 socketio_namespaces = ["erpnext_mcp_server.handlers.mcp_terminal_socketio"]
@@ -184,12 +185,12 @@ after_install = "erpnext_mcp_server.install.after_install"
 # 	}
 # }
 
-doc_events = {
-    "*": {"on_update": "erpnext_mcp_server.api.vue_mcp_server.cleanup_mcp_processes"},
-    # "Item": {
-    #     "on_update": "erpnext_mcp_server.handlers.item_socketio_connector.delivery_slip_connector_socketio"
-    # }
-}
+# doc_events = {
+#     "*": {"on_update": "erpnext_mcp_server.api.vue_mcp_server.cleanup_mcp_processes"},
+#     # "Item": {
+#     #     "on_update": "erpnext_mcp_server.handlers.item_socketio_connector.delivery_slip_connector_socketio"
+#     # }
+# }
 
 on_redis_event = {
     "mcp_terminal_input": "erpnext_mcp_server.handlers.socket_handlers.realtime_handler"
@@ -309,11 +310,15 @@ website_route_rules = [
         "from_route": "/ai-chatbot-client/<path:app_path>",
         "to_route": "ai-chatbot-client",
     },
-]
-
-website_route_rules = [
     {
         "from_route": "/ai-chatbot-terminal/<path:app_path>",
         "to_route": "ai-chatbot-terminal",
     },
 ]
+
+# website_route_rules = [
+#     {
+#         "from_route": "/ai-chatbot-terminal/<path:app_path>",
+#         "to_route": "ai-chatbot-terminal",
+#     },
+# ]

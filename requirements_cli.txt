@@ -1,0 +1,5 @@
+# Enhanced CLI Client Requirements
+httpx>=0.25.0
+rich>=13.0.0
+click>=8.0.0
+python-dotenv>=1.0.0

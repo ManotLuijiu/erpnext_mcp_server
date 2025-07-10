@@ -8,14 +8,53 @@ import json
 import os
 import signal
 import subprocess
+import sys
 import threading
 import time
+from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 import frappe
+import typer
 from frappe import _
+from loguru import logger
+from rich import inspect, pretty
+from rich import print as rprint
+from rich.console import Console
+from rich.style import Style
+from rich.theme import Theme
+from rich.traceback import install
 
 from ..mcp.config import mcp_config, setup_mcp_server, validate_mcp_environment
+
+
+@dataclass
+class ApplicationStyles:
+    error: Style = Style(color="red", bold=True)
+
+
+app = typer.Typer()
+app_styles = ApplicationStyles()
+custom_theme = Theme({"info": "bold cyan", "warning": "magenta", "danger": "bold red"})
+console = Console(theme=custom_theme)
+console.print("Testing console.print info", style="info")
+console.print("Testing console.print warning", style="warning")
+pretty.install()
+install(show_locals=True)
+console.log("Nothing Happening here", style="info")
+console.log("Trouble brewing...", style="warning")
+console.log("Bad News!", style="danger")
+
+logger.remove(0)
+logger.add(sys.stderr, format="<green>{time}</green> | {level} | {message}")
+
+logger.info("Hello World")
+logger.trace("A trace message.")
+logger.debug("A debug message.")
+logger.success("A success message.")
+logger.warning("A warning message.")
+logger.error("An error message.")
+logger.critical("A critical message.")
 
 
 class MCPProcessManager:
@@ -45,6 +84,7 @@ class MCPProcessManager:
         """Get unique session key for current user/site."""
         return f"{frappe.session.user}@{frappe.local.site}"
 
+    @app.command()
     def start_mcp_server(self) -> bool:
         """Start MCP server process for current session using configuration."""
         session_key = self.get_session_key()
@@ -64,7 +104,11 @@ class MCPProcessManager:
 
             # Get server script path from config
             server_script = self.config.get_server_path()
-            print(f"server_path {self.config.get_server_path()}")
+            console.print(
+                f"server_path {self.config.get_server_path()}", style=app_styles.error
+            )
+            rprint(f"server_path {self.config.get_server_path()}")
+            inspect(f"server_path {self.config.get_server_path()}")
 
             # Path to MCP server script
             # server_script = os.path.join(
@@ -645,13 +689,13 @@ def get_mcp_config():
 
 
 # Cleanup on site shutdown
-def cleanup_mcp_processes():
-    """Clean up MCP processes on site shutdown."""
-    try:
-        mcp_manager.cleanup_all()
-    except Exception:
-        pass
+# def cleanup_mcp_processes(doc, method=None):
+#     """Clean up MCP processes on site shutdown."""
+#     try:
+#         mcp_manager.cleanup_all()
+#     except Exception:
+#         pass
 
 
 # Register cleanup function
-frappe.local.after_request = cleanup_mcp_processes
+# frappe.local.after_request = cleanup_mcp_processes
