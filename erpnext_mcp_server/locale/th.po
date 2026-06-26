@@ -8,15 +8,46 @@ msgstr ""
 "Project-Id-Version: ERPNext MCP Server VERSION\n"
 "Report-Msgid-Bugs-To: moocoding@gmail.com\n"
 "POT-Creation-Date: 2025-05-06 16:06+0642\n"
-"PO-Revision-Date: 2025-05-06 16:44\n"
+"PO-Revision-Date: 2025-05-06 16:44+0000\n"
 "Last-Translator: moocoding@gmail.com\n"
-"Language-Team: moocoding@gmail.com\n"
 "Language: th\n"
+"Language-Team: moocoding@gmail.com\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
-"Generated-By: Babel 2.13.1\n"
+"Generated-By: Babel 2.16.0\n"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid ""
+"<h4>Terminal Keyboard Shortcuts</h4>\n"
+"        <ul>\n"
+"          <li><strong>Ctrl+C</strong>: Interrupt current process</li>\n"
+"          <li><strong>Ctrl+D</strong>: Send EOF</li>\n"
+"          <li><strong>Ctrl+L</strong>: Clear screen</li>\n"
+"          <li><strong>Up/Down arrows</strong>: Navigate command history</li>\n"
+"          <li><strong>Ctrl+A</strong>: Move cursor to beginning of line</li>\n"
+"          <li><strong>Ctrl+E</strong>: Move cursor to end of line</li>\n"
+"          <li><strong>Ctrl+K</strong>: Delete from cursor to end of line</li>\n"
+"          <li><strong>Ctrl+U</strong>: Delete from start of line to cursor</li>\n"
+"        </ul>"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "==================Connector"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "About"
+msgstr "เกี่ยวกับ"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Accountant, Software Engineer & Content Creator"
+msgstr ""
 
 #. Name of a role
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
@@ -28,10 +59,30 @@ msgstr "ผู้จัดการบัญชี"
 msgid "All"
 msgstr "ทั้งหมด"
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Apply"
+msgstr "ใช้"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Are you sure you want to restart the MCP Server?"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Are you sure you want to stop the MCP Server?"
+msgstr ""
+
 #. Description of the 'Summary' (Small Text) field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Brief summary of this tax law section"
 msgstr "สรุปกฎหมายภาษีในส่วนนี้"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Building awesome things with code!"
+msgstr ""
 
 #. Label of a Text Editor field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
@@ -47,6 +98,21 @@ msgstr "สูตรการคำนวณ"
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Category"
 msgstr "หมวดหมู่"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Connect MCP"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Connect to your MCP Server and run commands directly from your browser"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Connecting..."
+msgstr ""
 
 #. Label of a Section Break field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
@@ -67,6 +133,16 @@ msgstr "เนื้อหา (ภาษาไทย)"
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Corporate Income Tax"
 msgstr "ภาษีเงินได้นิติบุคคล"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Dark (Tokyo Night)"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Delete Demo Data"
+msgstr "ลบข้อมูลสาธิต"
 
 #. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
 #. Regulation'
@@ -91,6 +167,11 @@ msgstr "รายละเอียด"
 msgid "Director-General Notification"
 msgstr "การแจ้งเตือนจาก ผู้อำนวยการ"
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "ERPNext MCP Chatbot"
+msgstr ""
+
 #. Label of a Date field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Effective Date"
@@ -112,6 +193,11 @@ msgstr "มีผลถึงวันที่"
 msgid "English translation of the tax law"
 msgstr "แปลกฏหมายภาษีไทยให้เป็นภาษาอังกฤษ"
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Error loading logs"
+msgstr ""
+
 #. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Exemptions"
@@ -126,6 +212,41 @@ msgstr "วันหมดอายุ"
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
 msgid "Failed"
 msgstr "ไม่สำเร็จ"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Failed to start MCP Server"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Failed to start MCP server"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Failed to start server:"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Failed to stop MCP Server"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Failed to stop MCP server"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Font Size"
+msgstr "ขนาดตัวอักษร"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Frappe Support"
+msgstr "ฝ่ายสนับสนุน Frappe"
 
 #. Description of the 'Content (Thai)' (Text Editor) field in DocType 'Thai
 #. Tax
@@ -144,6 +265,11 @@ msgstr "ทั่วไป"
 msgid "Has Calculation Formula"
 msgstr ""
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Insufficient permissions to execute terminal commands"
+msgstr ""
+
 #. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "International Taxation"
@@ -153,6 +279,11 @@ msgstr ""
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Is Active"
 msgstr "กำลังใช้งาน"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Keyboard Shortcuts"
+msgstr "แป้นพิมพ์ลัด"
 
 #. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
 #. Regulation'
@@ -165,9 +296,84 @@ msgstr "กฎหมาย"
 msgid "Legal Reference"
 msgstr "กฎหมายที่ใช้อ้างอิง"
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Light"
+msgstr "แสง"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Loading logs..."
+msgstr "กำลังโหลดบันทึก..."
+
 #. Label of a Code field in DocType 'Tax Law Update Log'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
 msgid "Log Details"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Logs"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP Diagnostic"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP Server"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP Server Dashboard"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP Server Logs"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP Server Manager"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP Server stopped successfully"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP Terminal"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP query failed"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP server is not configured or enabled"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP server is not running. Please start the server first."
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "MCP server started successfully"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Manage MCP Servers"
 msgstr ""
 
 #. Label of a Currency field in DocType 'Thai Tax Rate'
@@ -189,6 +395,11 @@ msgstr ""
 #. Regulation'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law_related_regulation/thai_tax_law_related_regulation.json
 msgid "Ministerial Regulation"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "No logs available"
 msgstr ""
 
 #. Label of a Small Text field in DocType 'Thai Tax Rate'
@@ -217,6 +428,16 @@ msgstr ""
 msgid "Personal Income Tax"
 msgstr ""
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Print Message"
+msgstr "พิมพ์ข้อความ"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Progress"
+msgstr "ความคืบหน้า"
+
 #. Description of the 'Calculation Formula' (Code) field in DocType 'Thai Tax
 #. Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
@@ -238,9 +459,19 @@ msgstr ""
 msgid "References"
 msgstr ""
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Refresh"
+msgstr "ดึงข้อมูลใหม่"
+
 #. Label of a Table field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Related Regulations"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Restart MCP Server"
 msgstr ""
 
 #. Option for the 'Type' (Select) field in DocType 'Thai Tax Law Related
@@ -264,6 +495,46 @@ msgstr ""
 msgid "Sections Updated"
 msgstr ""
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Server Logs"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Server Name is required"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Server Name must be at least 3 characters long"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Server Name should be at least 3 characters long"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Server Script Path is required"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Server Type is required"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Server is not running"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Settings"
+msgstr "การตั้งค่า"
+
 #. Label of a Data field in DocType 'Tax Law Update Log'
 #. Label of a Data field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
@@ -281,9 +552,24 @@ msgstr ""
 msgid "Stamp Duty"
 msgstr ""
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Start MCP Server"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Starting MCP server..."
+msgstr ""
+
 #. Label of a Select field in DocType 'Tax Law Update Log'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
 msgid "Status"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Stop MCP Server"
 msgstr ""
 
 #. Label of a Data field in DocType 'Thai Tax Law'
@@ -300,6 +586,11 @@ msgstr ""
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Summary"
 msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "System Health"
+msgstr "สุขภาพระบบ"
 
 #. Name of a role
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/tax_law_update_log/tax_law_update_log.json
@@ -333,6 +624,21 @@ msgstr ""
 msgid "Tax Rates"
 msgstr ""
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Terminal Keyboard Shortcuts"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Terminal Settings"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Terminal font size in pixels"
+msgstr ""
+
 #. Name of a DocType
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Thai Tax Law"
@@ -347,6 +653,16 @@ msgstr ""
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_rate/thai_tax_rate.json
 msgid "Thai Tax Rate"
 msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Theme"
+msgstr "กระทู้"
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "This method is only meant for developer mode"
+msgstr "วิธีนี้มีไว้สำหรับโหมดนักพัฒนาเท่านั้น"
 
 #. Label of a Data field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
@@ -383,6 +699,11 @@ msgstr ""
 msgid "Update Date"
 msgstr ""
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "User is not logged in or session is invalid"
+msgstr ""
+
 #. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Value Added Tax"
@@ -405,7 +726,38 @@ msgstr ""
 msgid "Vector embedding of the content for semantic search"
 msgstr ""
 
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "Who is MooCoding?"
+msgstr ""
+
 #. Option for the 'Tax Category' (Select) field in DocType 'Thai Tax Law'
 #: erpnext_mcp_server/erpnext_mcp_server/doctype/thai_tax_law/thai_tax_law.json
 msgid "Withholding Tax"
 msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "You do not have permission to uer MCP"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "You don't have permission to use MCP Terminal"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "You don't have permission to view active sessions"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "YouTube: MooCoding"
+msgstr ""
+
+#. Extracted from SPA (React/TypeScript) files
+#: SPA
+msgid "ai-chatbot"
+msgstr ""
+

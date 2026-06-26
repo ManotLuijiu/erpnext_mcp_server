@@ -1,209 +1,303 @@
-# Standardized MCP Development on Frappe/ERPNext
+# ERPNext MCP Server
 
-## ERPNext MCP Server
+**Framework-level MCP Server** for Frappe/ERPNext — works like Doppio CLI, not site-specific.
 
-ERPNext management, file operations, read-only database access, and ERPNext API integration
+> Built by AWS Solution Ltd. | Contact: moocoding@gmail.com
 
-## The Development to Production Workflow
+## Overview
 
-This guide establishes a standardized approach for developing Model Context Protocol (MCP) servers on Frappe/ERPNext, inspired by the Doppio SPA development workflow.
+Unlike typical Frappe apps that install per-site, this MCP server runs at the **bench framework level**:
 
-### Development Mode (Port 8080)
+- One server instance serves all sites on the bench
+- Site context switches dynamically via tool calls
+- No installation to each site needed
 
-- Live development environment with hot reloading
-- Direct debugging and testing
-- Clear separation from production
+```
+┌─────────────────────────────────────────────────────┐
+│  MCP Client (Claude, Hermes, etc.)                 │
+│  (running on another machine)                        │
+└────────────────────┬────────────────────────────────┘
+                     │ stdio
+┌────────────────────▼────────────────────────────────┐
+│  ERPNext MCP Server                                 │
+│  (this bench)                                       │
+│                                                     │
+│  • list_sites     → all bench sites               │
+│  • switch_site    → change context                 │
+│  • get_document   → query current site             │
+│  • execute_sql    → safe SELECT queries            │
+│  • bench_command  → read-only bench operations     │
+│  • ... + 15 more tools                            │
+└─────────────────────────────────────────────────────┘
+```
 
-### Production Mode (Port 8100)
+## Prerequisites
 
-- Integrated with NGINX and supervisor
-- Secure and scalable
-- Follows Frappe's established patterns
+- Frappe/ERPNext v15+ installed on a bench
+- Python 3.10+ (uses bench's virtual environment)
+- MCP client (Claude Code, Hermes Agent, etc.)
 
-## Setting Up the Development Environment
+## Quick Start
 
-### 1. Install the Framework
+### 1. Verify Python Environment
 
-Add the MCP development framework to your app's `hooks.py`:
+```bash
+cd ~/frappe-bench
+./env/bin/python --version  # Should be Python 3.10+
+```
+
+### 2. Test Locally
+
+```bash
+# Set your default site
+export FRAPPE_SITE=your-site.domain.com
+export BENCH_PATH=/path/to/your/frappe-bench
+
+# Run the server
+./env/bin/python -m erpnext_mcp_server.mcp.server
+```
+
+### 3. Configure MCP Client
+
+#### For Claude Code
+
+Add to `.mcp.json` in your project:
+
+```json
+{
+  "mcpServers": {
+    "erpnext": {
+      "command": "python",
+      "args": ["-m", "erpnext_mcp_server.mcp.server"],
+      "env": {
+        "FRAPPE_SITE": "your-site.domain.com",
+        "BENCH_PATH": "/home/youruser/frappe-bench"
+      }
+    }
+  }
+}
+```
+
+#### For Hermes Agent
+
+In your Hermes configuration:
+
+```yaml
+mcp_servers:
+  erpnext:
+    command: ssh
+    args:
+      - user@your-server
+      - 'cd /path/to/bench && FRAPPE_SITE=your-site.com ./env/bin/python -m erpnext_mcp_server.mcp.server'
+```
+
+#### For Other MCP Clients
+
+The server uses **STDIO transport** (stdin/stdout). Any MCP client that supports stdio will work:
+
+```json
+{
+  "mcpServers": {
+    "erpnext": {
+      "command": "/path/to/frappe-bench/env/bin/python",
+      "args": ["-m", "erpnext_mcp_server.mcp.server"],
+      "env": {
+        "FRAPPE_SITE": "your-site.domain.com",
+        "BENCH_PATH": "/path/to/frappe-bench"
+      }
+    }
+  }
+}
+```
+
+## Available Tools
+
+### Site Management
+
+| Tool           | Arguments | Description                  |
+| -------------- | --------- | ---------------------------- |
+| `list_sites`   | —         | List all sites on this bench |
+| `switch_site`  | `site`    | Switch to a different site   |
+| `current_site` | —         | Get current site name        |
+
+### Document CRUD
+
+| Tool              | Arguments                       | Description                 |
+| ----------------- | ------------------------------- | --------------------------- |
+| `get_document`    | `doctype`, `name`               | Get document by ID          |
+| `list_documents`  | `doctype`, `filters?`, `limit?` | List documents with filters |
+| `create_document` | `doctype`, `data`               | Create new document         |
+| `update_document` | `doctype`, `name`, `data`       | Update existing document    |
+| `delete_document` | `doctype`, `name`               | Delete/cancel document      |
+| `count_documents` | `doctype`, `filters?`           | Count matching documents    |
+
+### Metadata
+
+| Tool               | Arguments | Description           |
+| ------------------ | --------- | --------------------- |
+| `list_doctypes`    | `module?` | List all DocTypes     |
+| `get_doctype_meta` | `doctype` | Get field definitions |
+
+### Database
+
+| Tool             | Arguments         | Description                 |
+| ---------------- | ----------------- | --------------------------- |
+| `execute_sql`    | `query`, `limit?` | Execute SELECT query (safe) |
+| `get_table_info` | `table`           | Get table structure         |
+
+### System Info
+
+| Tool              | Arguments | Description                  |
+| ----------------- | --------- | ---------------------------- |
+| `get_system_info` | —         | System and DB info           |
+| `get_versions`    | —         | Installed app versions       |
+| `bench_command`   | `command` | Run read-only bench commands |
+
+### Workflow
+
+| Tool              | Arguments         | Description            |
+| ----------------- | ----------------- | ---------------------- |
+| `submit_document` | `doctype`, `name` | Submit (docstatus 0→1) |
+| `cancel_document` | `doctype`, `name` | Cancel submitted doc   |
+
+### Search
+
+| Tool     | Arguments                     | Description            |
+| -------- | ----------------------------- | ---------------------- |
+| `search` | `query`, `doctype?`, `limit?` | Search across DocTypes |
+
+### Files
+
+| Tool         | Arguments            | Description                 |
+| ------------ | -------------------- | --------------------------- |
+| `read_file`  | `path`, `lines?`     | Read file (safe paths only) |
+| `list_files` | `path`, `recursive?` | List directory              |
+
+## Usage Examples
+
+### Python Client Test
 
 ```python
-# In your app's hooks.py
-commands = [
-    "your_app.mcp_dev.commands"
-]
+import subprocess
+import json
+
+proc = subprocess.Popen(
+    ["./env/bin/python", "-m", "erpnext_mcp_server.mcp.server"],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    cwd="/path/to/frappe-bench",
+    env={"FRAPPE_SITE": "your-site.domain.com"}
+)
+
+# Initialize
+init_msg = {
+    "jsonrpc": "2.0", "id": 1,
+    "method": "initialize",
+    "params": {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {},
+        "clientInfo": {"name": "test", "version": "1.0"}
+    }
+}
+proc.stdin.write((json.dumps(init_msg) + "\n").encode())
+proc.stdin.flush()
+
+# List sites
+list_msg = {
+    "jsonrpc": "2.0", "id": 2,
+    "method": "tools/call",
+    "params": {"name": "list_sites", "arguments": {}}
+}
+proc.stdin.write((json.dumps(list_msg) + "\n").encode())
+proc.stdin.flush()
+
+proc.stdin.close()
+print(proc.stdout.read().decode())
 ```
 
-### 2. Initialize the Development Environment
+### Claude Code Usage
+
+Once configured, simply ask Claude:
+
+```
+> List all customers in ERPNext
+> Create a new Sales Order for customer ABC
+> What is the total outstanding for Invoice INV-001?
+```
+
+Claude will use the MCP tools to query ERPNext directly.
+
+## Architecture
+
+```
+erpnext_mcp_server/
+├── __init__.py
+├── hooks.py
+├── mcp/
+│   ├── __init__.py
+│   ├── __main__.py          # Entry point
+│   ├── server.py            # Main MCP server
+│   └── config.py            # Configuration
+└── doctype/                 # Settings DocTypes (optional)
+```
+
+### Design Principles
+
+1. **Framework Level** — Runs at bench level, not per-site
+2. **Lazy Loading** — Frappe imported only when needed
+3. **Site Context** — Switches context dynamically per tool call
+4. **Security First** — SQL limited to SELECT, files restricted to safe paths
+
+## Security
+
+| Restriction    | Details                                          |
+| -------------- | ------------------------------------------------ |
+| SQL            | Only SELECT queries allowed                      |
+| Files          | Only `sites/`, `apps/`, `logs/`, `config/` paths |
+| Bench commands | Read-only operations only                        |
+| Site access    | Enforced via Frappe permissions                  |
+
+## Environment Variables
+
+| Variable                | Required | Default                     | Description          |
+| ----------------------- | -------- | --------------------------- | -------------------- |
+| `FRAPPE_SITE`           | Yes      | —                           | Default site name    |
+| `BENCH_PATH`            | No       | `/home/frappe/frappe-bench` | Bench directory      |
+| `FRAPPE_STREAM_LOGGING` | No       | `1`                         | Disable file logging |
+
+## Troubleshooting
+
+### "site does not exist" error
 
 ```bash
-# Initialize development environment
-bench --site your-site.com mcp-config --app your_app_name
+# Verify site exists
+ls ~/frappe-bench/sites/  | grep your-site
 
-# Configure development port (default: 8080)
-bench --site your-site.com mcp-config --dev-port 8080
-
-# Configure production port (default: 8100)
-bench --site your-site.com mcp-config --prod-port 8100
+# Check site config
+cat ~/frappe-bench/sites/your-site.domain.com/site_config.json
 ```
 
-### 3. Start Development Server
+### Connection refused
 
-```bash
-# Start development server
-bench --site your-site.com mcp-dev
-```
+The server uses **stdio transport**, not HTTP. Ensure your MCP client is connecting via stdin/stdout pipes.
 
-This will:
+### Permission denied
 
-- Start your MCP server on port 8080
-- Watch for file changes and auto-reload
-- Stream logs to the console
+Ensure the user running the server has:
 
-## Development to Production Workflow
+- Read access to bench directory
+- Database access for the site
+- Permission to execute bench commands
 
-### 1. Develop on Port 8080
+## License
 
-During development:
+Proprietary - AWS Solution Ltd.
 
-- Your MCP server runs on port 8080
-- Changes to Python files trigger auto-reload
-- You can debug and test in real-time
+## Support
 
-### 2. Build for Production
+- Email: moocoding@gmail.com
+- Issues: Open an issue in the repository
 
-When ready to deploy:
+---
 
-```bash
-# Build for production
-bench --site your-site.com mcp-build
-```
-
-This will:
-
-- Configure NGINX to serve your MCP server on port 8100 under `/mcp/`
-- Set up supervisor to keep your MCP server running
-- Prepare all necessary configuration files
-
-### 3. Deploy to Production
-
-```bash
-# Deploy to production
-bench --site your-site.com mcp-deploy --reload-nginx --restart-supervisor
-```
-
-This will:
-
-- Apply the NGINX configuration
-- Start the MCP server under supervisor
-- Make it available at `https://your-site.com/mcp/`
-
-## Configuration Management
-
-The framework provides a configuration system to manage your MCP development environment:
-
-```bash
-# View current configuration
-bench --site your-site.com mcp-config
-
-# Update entry point
-bench --site your-site.com mcp-config --entry-point "your_app.mcp_server:server"
-
-# Add watched paths
-bench --site your-site.com mcp-config --add-watch "apps/your_app/your_app/mcp/*.py"
-
-# Set environment variables
-bench --site your-site.com mcp-config --set-env "DEBUG" "true"
-```
-
-## Benefits of the Standardized Approach
-
-1. **Development-Production Parity**:
-
-   - Same code runs in both environments
-   - No surprises when deploying
-
-2. **Developer Experience**:
-
-   - Hot reloading during development
-   - Clear separation of concerns
-   - Unified configuration management
-
-3. **Production Robustness**:
-
-   - Proper integration with NGINX
-   - Supervisor manages process lifecycle
-   - Standard Frappe deployment patterns
-
-4. **Team Collaboration**:
-   - Consistent development approach
-   - Standard commands and workflows
-   - Easy onboarding for new developers
-
-## Best Practices
-
-### 1. Structuring Your MCP Server
-
-Organize your MCP server code with a clean separation of concerns:
-
-```bash
-your_app/
-├── your_app/
-│   ├── mcp_server.py       # Main server entry point
-│   ├── mcp/
-│   │   ├── __init__.py     # Package initialization
-│   │   ├── tools/          # MCP tools implementation
-│   │   ├── resources/      # MCP resources implementation
-│   │   └── prompts/        # MCP prompts implementation
-│   └── mcp_dev.py          # Development framework
-```
-
-### 2. Version Control
-
-- Include the development configuration in version control
-- Exclude environment-specific settings
-- Document required environment variables
-
-### 3. Testing
-
-- Create specific tests for MCP functionality
-- Use both unit tests and integration tests
-- Test in both development and production modes
-
-### 4. Documentation
-
-- Document your MCP server's capabilities
-- Create examples of using your tools and resources
-- Include setup instructions for both development and production
-
-## Advanced Topics
-
-### 1. Multiple MCP Servers
-
-For larger applications, you might need multiple MCP servers:
-
-```bash
-# Configure multiple entry points
-bench --site your-site.com mcp-config --entry-point "your_app.mcp_server_1:server"
-bench --site your-site.com mcp-config --dev-port 8081
-
-# Start specific server
-bench --site your-site.com mcp-dev --port 8081
-```
-
-### 2. Security Considerations
-
-- Use proper authentication in production
-- Consider rate limiting for public-facing servers
-- Implement proper error handling and logging
-
-### 3. Performance Optimization
-
-- Profile your MCP tools for performance bottlenecks
-- Consider caching frequently accessed data
-- Use asynchronous operations for I/O-bound tasks
-
-By following this standardized approach, you can develop MCP servers for Frappe/ERPNext that are robust, maintainable, and follow established patterns familiar to Frappe developers.
-
-#### License
-
-mit
+**Built with Frappe Framework** | **MCP Protocol** | **STDIO Transport**

@@ -83,6 +83,100 @@ async def handle_list_tools() -> list[types.Tool]:
             inputSchema={"type": "object", "properties": {}, "required": []},
         ),
         types.Tool(
+            name="okf_export_doctype",
+            description="Export a Frappe DocType as an OKF (Open Knowledge Format) Markdown concept. Returns the path to the written concept.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "doctype": {"type": "string", "description": "DocType name to export (e.g. 'Sales Invoice')"},
+                    "site": {"type": "string", "description": "Frappe site (defaults to current)"},
+                    "bundle": {"type": "string", "description": "Bundle directory name under okf/bundles/ (e.g. 'aws-solution')"},
+                    "overwrite": {"type": "boolean", "description": "Overwrite if exists", "default": False},
+                },
+                "required": ["doctype", "bundle"],
+            },
+        ),
+        types.Tool(
+            name="okf_list_concepts",
+            description="List OKF concepts in a bundle, optionally filtered by type or tag.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "bundle": {"type": "string", "description": "Bundle directory name (e.g. 'aws-solution')"},
+                    "type": {"type": "string", "description": "Filter by concept type (e.g. 'Frappe DocType', 'Claude Skill')"},
+                    "tag": {"type": "string", "description": "Filter by tag (e.g. 'kbank', 'billing')"},
+                },
+                "required": ["bundle"],
+            },
+        ),
+        types.Tool(
+            name="okf_get_concept",
+            description="Read a single OKF concept by relative path. Returns parsed frontmatter + body. Unsafe paths are rejected.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "bundle": {"type": "string", "description": "Bundle directory name"},
+                    "path": {"type": "string", "description": "Concept path relative to bundle root (e.g. 'doctypes/sales-invoice.md')"},
+                },
+                "required": ["bundle", "path"],
+            },
+        ),
+        types.Tool(
+            name="okf_search",
+            description="Text search across OKF concepts (frontmatter + body). Scores by title/tag/body matches. No embeddings in v1.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "bundle": {"type": "string", "description": "Bundle directory name"},
+                    "query": {"type": "string", "description": "Search query string"},
+                    "limit": {"type": "integer", "description": "Max results (capped at 100)", "default": 20},
+                    "type": {"type": "string", "description": "Optional type filter"},
+                },
+                "required": ["bundle", "query"],
+            },
+        ),
+        types.Tool(
+            name="okf_validate_bundle",
+            description="Validate all concepts in a bundle. Checks frontmatter, required 'type' field, path safety. Auto-regenerates bundle index.md if present.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "bundle": {"type": "string", "description": "Bundle directory name"},
+                },
+                "required": ["bundle"],
+            },
+        ),
+        types.Tool(
+            name="okf_export_site_catalog",
+            description="Export all (or filtered) DocTypes from a Frappe site as OKF concepts. Creates a complete bundle with auto-generated index.md. Filters by module (not the unreliable 'custom' flag).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "site": {"type": "string", "description": "Frappe site to export from"},
+                    "bundle": {"type": "string", "description": "Bundle directory name (e.g. 'aws-solution')"},
+                    "doctype_filter": {"type": "string", "description": "SQL LIKE filter for DocType name (e.g. 'Thai Bank %')"},
+                    "module_filter": {"type": "string", "description": "SQL LIKE filter for DocType module (e.g. 'Thai %')"},
+                    "include_custom": {"type": "boolean", "description": "Include custom (non-core) DocTypes", "default": True},
+                    "include_core": {"type": "boolean", "description": "Include ERPNext/Frappe core DocTypes", "default": False},
+                    "limit": {"type": "integer", "description": "Max DocTypes to export", "default": 200},
+                },
+                "required": ["site", "bundle"],
+            },
+        ),
+        types.Tool(
+            name="okf_recommend_skill",
+            description="Recommend Claude Skills matching a task description. Returns skills with title, path, and snippet showing why they match.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "bundle": {"type": "string", "description": "Bundle directory name"},
+                    "task_description": {"type": "string", "description": "Description of the task (e.g. 'set up Gmail OAuth for Frappe')"},
+                    "limit": {"type": "integer", "description": "Max recommendations", "default": 5},
+                },
+                "required": ["bundle", "task_description"],
+            },
+        ),
+        types.Tool(
             name="get_document",
             description="Get a specific document from ERPNext",
             inputSchema={
@@ -238,6 +332,54 @@ async def execute_tool(name: str, arguments: dict) -> str:
     elif name == "bench_command":
         command = arguments["command"]
         return await execute_bench_command(command)
+
+    # ─── OKF tools ────────────────────────────────────────────────────────
+    elif name == "okf_export_doctype":
+        return await okf_export_doctype(
+            arguments["doctype"],
+            arguments.get("site") or frappe.local.site,
+            arguments["bundle"],
+            arguments.get("overwrite", False),
+        )
+
+    elif name == "okf_list_concepts":
+        return await okf_list_concepts(
+            arguments["bundle"],
+            type=arguments.get("type"),
+            tag=arguments.get("tag"),
+        )
+
+    elif name == "okf_get_concept":
+        return await okf_get_concept(arguments["bundle"], arguments["path"])
+
+    elif name == "okf_search":
+        return await okf_search(
+            arguments["bundle"],
+            arguments["query"],
+            limit=arguments.get("limit", 20),
+            type=arguments.get("type"),
+        )
+
+    elif name == "okf_validate_bundle":
+        return await okf_validate_bundle(arguments["bundle"])
+
+    elif name == "okf_export_site_catalog":
+        return await okf_export_site_catalog(
+            arguments["site"],
+            arguments["bundle"],
+            doctype_filter=arguments.get("doctype_filter"),
+            module_filter=arguments.get("module_filter"),
+            include_custom=arguments.get("include_custom", True),
+            include_core=arguments.get("include_core", False),
+            limit=arguments.get("limit", 200),
+        )
+
+    elif name == "okf_recommend_skill":
+        return await okf_recommend_skill(
+            arguments["bundle"],
+            arguments["task_description"],
+            limit=arguments.get("limit", 5),
+        )
 
     else:
         raise ValueError(f"Unknown tool: {name}")
@@ -454,6 +596,198 @@ async def execute_bench_command(command: str) -> str:
         raise Exception("Command timed out after 30 seconds")
     except Exception as e:
         raise Exception(f"Bench command failed: {e}")
+
+
+# ─── OKF (Open Knowledge Format) tool implementations ─────────────────────
+#
+# These wrap the erpnext_mcp_server.okf module. Bundles are stored under
+# <frappe-bench>/apps/erpnext_mcp_server/erpnext_mcp_server/okf/bundles/<bundle>/
+
+from pathlib import Path as _Path
+
+OKF_BUNDLES_ROOT = _Path(__file__).parent / "okf" / "bundles"
+OKF_BUNDLES_ROOT.mkdir(parents=True, exist_ok=True)
+
+
+def _bundle_path(bundle: str) -> _Path:
+    """Resolve a bundle name to its directory path. Raises if unsafe."""
+    from erpnext_mcp_server.okf.validator import is_safe_bundle_name
+    if not is_safe_bundle_name(bundle):
+        raise ValueError(
+            f"Invalid bundle name: '{bundle}'. "
+            "Must match ^[a-z0-9][a-z0-9_-]{{0,63}}$"
+        )
+    return OKF_BUNDLES_ROOT / bundle
+
+
+def _format_concept_summary(item: dict) -> str:
+    """Format a single concept for MCP text response."""
+    parts = [f"**{item.get('title', '?')}** — `{item.get('path', '?')}`"]
+    if item.get("type"):
+        parts.append(f"  - Type: `{item['type']}`")
+    if item.get("description"):
+        parts.append(f"  - {item['description'][:120]}")
+    if item.get("tags"):
+        tags_str = ", ".join(f"`{t}`" for t in item["tags"][:6])
+        parts.append(f"  - Tags: {tags_str}")
+    if item.get("snippet"):
+        parts.append(f"  - Snippet: {item['snippet'][:200]}")
+    if item.get("score") is not None:
+        parts.append(f"  - Score: {item['score']}")
+    return "\n".join(parts)
+
+
+async def okf_export_doctype(doctype: str, site: str, bundle: str, overwrite: bool = False) -> str:
+    """Export a single DocType as an OKF concept."""
+    from erpnext_mcp_server.okf.exporter import export_doctype
+    bundle_root = _bundle_path(bundle)
+    bundle_root.mkdir(parents=True, exist_ok=True)
+    result = export_doctype(doctype, bundle_root, site, overwrite=overwrite)
+    return (
+        f"✅ Exported DocType `{doctype}` to OKF concept\n"
+        f"  - Path: `{result['path']}`\n"
+        f"  - Fields: {result['fields_total']} total, {result['fields_redacted']} redacted\n"
+        f"  - Child tables: {result['child_tables']}\n\n"
+        f"Run `/usage` (well, `okf_validate_bundle {bundle}`) to regenerate the index."
+    )
+
+
+async def okf_list_concepts(bundle: str, type: str | None = None, tag: str | None = None) -> str:
+    """List concepts in a bundle, optionally filtered."""
+    from erpnext_mcp_server.okf.search import list_concepts
+    bundle_root = _bundle_path(bundle)
+    if not bundle_root.exists():
+        return f"❌ Bundle '{bundle}' does not exist. Run `okf_export_site_catalog` first."
+    concepts = list_concepts(bundle_root, type=type, tag=tag)
+    if not concepts:
+        return f"📭 No concepts found in bundle '{bundle}'" + (
+            f" with type='{type}'" if type else ""
+        ) + (f" tag='{tag}'" if tag else "")
+    header = f"📚 {len(concepts)} concept(s) in bundle '{bundle}'"
+    if type:
+        header += f" (type={type})"
+    if tag:
+        header += f" (tag={tag})"
+    body = "\n\n".join(_format_concept_summary(c) for c in concepts[:50])
+    if len(concepts) > 50:
+        body += f"\n\n_... and {len(concepts) - 50} more. Narrow with type/tag filter._"
+    return f"{header}\n\n{body}"
+
+
+async def okf_get_concept(bundle: str, path: str) -> str:
+    """Read a single concept by path."""
+    from erpnext_mcp_server.okf.search import get_concept
+    bundle_root = _bundle_path(bundle)
+    concept = get_concept(bundle_root, path)
+    if concept is None:
+        return (
+            f"❌ Concept not found or unsafe path: `{path}`\n"
+            f"  - Bundle: `{bundle}`\n"
+            f"  - Allowed: relative paths like `doctypes/sales-invoice.md`\n"
+            f"  - Rejected: `..`, absolute paths, paths with null bytes"
+        )
+    fm = concept.get("frontmatter") or {}
+    body = concept.get("body", "").strip()
+    fm_str = "\n".join(f"  {k}: {v}" for k, v in fm.items())
+    return (
+        f"📄 `{concept['path']}`\n\n"
+        f"**Frontmatter:**\n```yaml\n{fm_str}\n```\n\n"
+        f"**Body:**\n```markdown\n{body[:3000]}\n```\n"
+        + ("\n\n_...truncated. Read the file directly for full content._" if len(body) > 3000 else "")
+    )
+
+
+async def okf_search(bundle: str, query: str, limit: int = 20, type: str | None = None) -> str:
+    """Text search across concepts."""
+    from erpnext_mcp_server.okf.search import search_bundle
+    bundle_root = _bundle_path(bundle)
+    if not bundle_root.exists():
+        return f"❌ Bundle '{bundle}' does not exist."
+    results = search_bundle(bundle_root, query, limit=limit, type=type)
+    if not results:
+        return f"📭 No matches for query '{query}'" + (f" (type={type})" if type else "")
+    header = f"🔍 {len(results)} result(s) for '{query}' in '{bundle}'"
+    body = "\n\n".join(_format_concept_summary(r) for r in results)
+    return f"{header}\n\n{body}"
+
+
+async def okf_validate_bundle(bundle: str) -> str:
+    """Validate a bundle."""
+    from erpnext_mcp_server.okf.validator import validate_bundle as _validate
+    from erpnext_mcp_server.okf.bundle import generate_index
+    bundle_root = _bundle_path(bundle)
+    if not bundle_root.exists():
+        return f"❌ Bundle '{bundle}' does not exist."
+    result = _validate(bundle_root)
+    # Regenerate index if it exists (or create if missing)
+    try:
+        idx_path = generate_index(bundle_root)
+        regen_note = f"\n\n✅ Index regenerated at `{idx_path}`"
+    except Exception as e:
+        regen_note = f"\n\n⚠️ Index regen failed: {e}"
+    status = "✅ VALID" if result["valid"] else "❌ INVALID"
+    err_str = "\n".join(f"  - {e}" for e in result["errors"][:20]) or "  (none)"
+    warn_str = "\n".join(f"  - {w}" for w in result["warnings"][:20]) or "  (none)"
+    return (
+        f"{status} bundle '{bundle}'\n"
+        f"  - Concepts: {result['concepts']}\n"
+        f"  - Index present: {result['index_present']}\n\n"
+        f"**Errors ({len(result['errors'])}):**\n{err_str}\n\n"
+        f"**Warnings ({len(result['warnings'])}):**\n{warn_str}"
+        f"{regen_note}"
+    )
+
+
+async def okf_export_site_catalog(
+    site: str,
+    bundle: str,
+    *,
+    doctype_filter: str | None = None,
+    module_filter: str | None = None,
+    include_custom: bool = True,
+    include_core: bool = False,
+    limit: int = 200,
+) -> str:
+    """Export all (or filtered) DocTypes from a site as OKF concepts."""
+    from erpnext_mcp_server.okf.bundle import export_site_catalog
+    bundle_root = _bundle_path(bundle)
+    bundle_root.mkdir(parents=True, exist_ok=True)
+    result = export_site_catalog(
+        site=site,
+        bundle_root=bundle_root,
+        doctype_filter=doctype_filter,
+        module_filter=module_filter,
+        include_custom=include_custom,
+        include_core=include_core,
+    )
+    return (
+        f"✅ Site catalog exported\n"
+        f"  - Site: `{result['site']}`\n"
+        f"  - Bundle: `{result['bundle_path']}`\n"
+        f"  - DocTypes exported: {result['doctypes_exported']}\n"
+        f"  - DocTypes skipped: {result['doctypes_skipped']}\n"
+        f"  - Fields redacted (secrets): {result['fields_redacted']}\n"
+        f"  - Index: `{result['index_path']}`\n\n"
+        f"Try: `okf_list_concepts {bundle}` or `okf_search {bundle} 'KBank'`"
+    )
+
+
+async def okf_recommend_skill(bundle: str, task_description: str, limit: int = 5) -> str:
+    """Recommend Claude Skills matching a task description."""
+    from erpnext_mcp_server.okf.search import recommend_skill
+    bundle_root = _bundle_path(bundle)
+    if not bundle_root.exists():
+        return f"❌ Bundle '{bundle}' does not exist."
+    results = recommend_skill(bundle_root, task_description, limit=limit)
+    if not results:
+        return (
+            f"📭 No Claude Skills found matching: '{task_description}'\n"
+            f"  - Hint: skills are stored under `{bundle_root}/skills/`\n"
+            f"  - Run `export_skills(skills_root, bundle_root)` to populate"
+        )
+    header = f"🎯 Top {len(results)} skill recommendation(s) for: '{task_description}'"
+    body = "\n\n".join(_format_concept_summary(r) for r in results)
+    return f"{header}\n\n{body}"
 
 
 async def run_server():

@@ -1,25 +1,30 @@
 """
-MCP Server Configuration and Setup
-Configuration management and initialization for ERPNext MCP Server
+MCP Server Configuration for ERPNext
+No Frappe imports at module level - pure Python config
 """
 
 import os
-import sys
 from pathlib import Path
-
-import frappe
+from typing import List
 
 
 class MCPConfig:
-    """Configuration management for MCP server."""
+    """Configuration management for MCP server - no Frappe dependency."""
 
     def __init__(self) -> None:
         self.app_name = "erpnext_mcp_server"
         self.server_name = "erpnext-mcp-server"
-        self.server_version = "0.0.1"
+        self.server_version = "1.0.0"
+
+        # Get default site from environment
+        self.default_site = os.getenv("FRAPPE_SITE", "")
 
         # Security settings
         self.max_file_size = 10 * 1024 * 1024  # 10MB
+        self.sql_query_limit = 100
+        self.command_timeout = 30  # seconds
+
+        # Allowed file extensions
         self.allowed_file_extensions = {
             ".txt",
             ".md",
@@ -38,13 +43,13 @@ class MCPConfig:
             ".ini",
             ".log",
             ".sql",
+            ".csv",
+            ".tsv",
+            ".env",
+            ".gitignore",
         }
 
-        # Command timeouts
-        self.command_timeout = 30  # seconds
-        self.sql_query_limit = 100  # default row limit
-
-        # Safe directories (relative to bench)
+        # Safe directories
         self.safe_directories = [
             "sites",
             "apps",
@@ -57,7 +62,7 @@ class MCPConfig:
             "archives",
         ]
 
-        # Allowed bench commands
+        # Allowed bench commands (read-only operations)
         self.allowed_bench_commands = {
             "version": "Show bench and app versions",
             "status": "Show process status",
@@ -67,76 +72,37 @@ class MCPConfig:
             "show-config": "Show site configuration",
         }
 
-    def get_server_path(self) -> Path:
-        """Get path to MCP server script."""
-        return Path(frappe.get_app_path(self.app_name)) / "mcp" / "server.py"
+    def get_default_site(self) -> str:
+        """Get the default site from environment."""
+        return self.default_site
 
-    def get_safe_base_paths(self) -> list[str]:
+    def set_default_site(self, site: str) -> None:
+        """Set the default site."""
+        self.default_site = site
+        os.environ["FRAPPE_SITE"] = site
+
+    def get_safe_base_paths(self, bench_path: str) -> List[str]:
         """Get list of safe base paths for file operations."""
+        bench = Path(bench_path)
         return [
-            frappe.get_site_path(),  # Current site
-            frappe.get_site_path(".."),  # Sites directory
-            frappe.get_site_path("../.."),  # Bench directory
+            str(bench / "sites"),
+            str(bench / "apps"),
+            str(bench / "logs"),
+            str(bench / "config"),
         ]
 
-    def is_development_mode(self) -> bool:
-        """Check if running in development mode."""
-        return getattr(frappe.conf, "developer_mode", False)
+    def is_safe_file_extension(self, filename: str) -> bool:
+        """Check if file extension is allowed."""
+        return Path(filename).suffix.lower() in self.allowed_file_extensions
 
-    def get_environment_variables(self) -> dict[str, str]:
-        """Get environment variables for MCP server process."""
-        env = os.environ.copy()
-        env.update(
-            {
-                "FRAPPE_SITE": frappe.local.site,
-                "MCP_SERVER_NAME": self.server_name,
-                "MCP_DEBUG": str(self.is_development_mode()),
-            }
-        )
-        return env
+    def is_safe_directory(self, path: str) -> bool:
+        """Check if path is in safe directories."""
+        parts = Path(path).parts
+        if not parts:
+            return False
+        # Allow if first part is in safe_directories
+        return parts[0] in self.safe_directories
 
 
-def setup_mcp_server():
-    """Initialize MCP server setup."""
-    config = MCPConfig()
-    print(f"config setup_mcp_server {config}")
-
-    # Verify server script exists
-    server_path = config.get_server_path()
-    print(f"server_path setup_mcp_server {server_path}")
-    if not server_path.exists():
-        frappe.throw(f"MCP server script not found: {server_path}")
-
-    # Check permissions
-    if not frappe.has_permission("System Settings", "read"):
-        frappe.throw("Insufficient permissions to access MCP server")
-
-    return config
-
-
-def validate_mcp_environment():
-    """Validate that the environment is properly set up for MCP."""
-    try:
-        # Check if required Python packages are available
-        import mcp.server.stdio
-        import mcp.types
-        from mcp.server.lowlevel import Server
-
-        # Check Frappe environment
-        if not frappe.db:
-            frappe.throw("Database connection not available")
-
-        # Check site access
-        if not frappe.local.site:
-            frappe.throw("Site context not available")
-
-        return True
-
-    except ImportError as e:
-        frappe.throw(f"MCP dependencies not installed: {str(e)}")
-    except Exception as e:
-        frappe.throw(f"Environment validation failed: {str(e)}")
-
-
-# Export configuration instance
+# Global config instance
 mcp_config = MCPConfig()

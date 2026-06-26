@@ -1,344 +1,944 @@
 """
-ERPNext MCP Server - Main Implementation
-Provides Model Context Protocol server for ERPNext automation
+ERPNext MCP Server - Framework Level Implementation
+Works like Doppio CLI: bench integration, not site-specific.
+
+Usage:
+  # With default site from environment
+  python -m erpnext_mcp_server.mcp.server
+
+  # With specific site
+  FRAPPE_SITE=demo.bunchee.online python -m erpnext_mcp_server.mcp.server
+
+  # Via SSH (for Hermes Agent on remote machine)
+  ssh user@server "FRAPPE_SITE=your-site.com python -m erpnext_mcp_server.mcp.server"
 """
 
 import asyncio
 import json
-import logging
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-from typing import Any, Dict, List
+import os
+import sys
+import traceback
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-import frappe
-import mcp.server.stdio
-import mcp.types as types
-from frappe.utils import get_site_name
-from mcp.server.lowlevel import NotificationOptions, Server
-from mcp.server.models import InitializationOptions
+# ============================================================
+# CONFIGURATION - Set before any Frappe imports
+# ============================================================
+BENCH_PATH = os.getenv("BENCH_PATH", "/home/frappe/frappe-bench")
+SITE_ARG = os.getenv("FRAPPE_SITE", "")
 
-from .config import mcp_config, setup_mcp_server, validate_mcp_environment
-from .tools.database_tools import DatabaseTools
-from .tools.document_tools import DocumentTools
-from .tools.file_tools import FileTools
-from .tools.system_tools import SystemTools
+# Fix logger issue: set stream_only to avoid file path problems
+os.environ["FRAPPE_STREAM_LOGGING"] = "1"
 
+# Change to bench directory for relative path resolution
+os.chdir(BENCH_PATH)
 
-@asynccontextmanager
-async def server_lifespan(server: Server) -> AsyncIterator[Dict[str, Any]]:
-    """Manage server startup and shutdown lifecycle."""
-    print(f"server {server}")
+# Add bench to path
+sys.path.insert(0, os.path.join(BENCH_PATH, "apps", "frappe"))
+sys.path.insert(0, BENCH_PATH)
 
-    # Validate environment using config
-    validate_mcp_environment()
-
-    # Setup MCP server with config
-    config = setup_mcp_server()
-
-    print(f"config server.py {config}")
-
-    # Initialize resources on startup
-    site_name = get_site_name(
-        frappe.local.request.host if frappe.local.request else None
-    )
-
-    print(f"site_name server.py {site_name}")
-
-    # Initialize Frappe context
-    if not frappe.db:
-        frappe.init(site=site_name)
-        frappe.connect()
-
-    # Initialize Frappe context
-    if not frappe.db:
-        frappe.init(site=site_name)
-        frappe.connect()
-
-    # Initialize tool classes with config
-    document_tools = DocumentTools(config)
-    print(f"document_tools {document_tools}")
-
-    database_tools = DatabaseTools(config)
-    print(f"database_tools {database_tools}")
-
-    system_tools = SystemTools(config)
-    print(f"system_tools {system_tools}")
-
-    file_tools = FileTools(config)
-    print(f"file_tools {file_tools}")
-
-    context = {
-        "db": frappe.db,
-        "site_name": site_name,
-        "config": config,
-        "document_tools": document_tools,
-        "database_tools": database_tools,
-        "system_tools": system_tools,
-        "file_tools": file_tools,
-    }
-
-    try:
-        yield context
-    finally:
-        # Clean up on shutdown
-        if frappe.db:
-            frappe.db.close()
+# ============================================================
+# FRAPPE BOOTSTRAP - Deferred until tool execution
+# ============================================================
+frappe = None
 
 
-# Create server instance
-# server = Server("erpnext-mcp-server", lifespan=server_lifespan)
-server = Server(
-    mcp_config.server_name, version=mcp_config.server_version, lifespan=server_lifespan
+def get_frappe():
+    """Lazy import of frappe - only when needed."""
+    global frappe
+    if frappe is None:
+        import frappe as _frappe
+
+        frappe = _frappe
+    return frappe
+
+
+# ============================================================
+# MCP SERVER SETUP
+# ============================================================
+from mcp.server import InitializationOptions, Server
+from mcp.server.stdio import stdio_server
+from mcp.types import (
+    CallToolResult,
+    ListToolsResult,
+    ServerCapabilities,
+    Tool,
+    ToolsCapability,
 )
 
-print(f"server after create server {server}")
+# Server instance
+server = Server("erpnext-mcp-server")
 
 
+# ============================================================
+# SITE CONTEXT MANAGEMENT
+# ============================================================
+class SiteContext:
+    """Manages Frappe site context - switches on demand."""
+
+    def __init__(self):
+        self._current_site: Optional[str] = None
+        self._frappe_initialized = False
+        self._bench_path = BENCH_PATH
+        self._sites_path = os.path.join(BENCH_PATH, "sites")
+
+    def get_current_site(self) -> str:
+        """Get current site name."""
+        return self._current_site or SITE_ARG or ""
+
+    def _get_site_path(self, site_name: str) -> str:
+        """Get absolute path to site directory."""
+        return os.path.join(self._sites_path, site_name)
+
+    def _ensure_site_logs(self, site_name: str) -> None:
+        """Create logs directory for site if it doesn't exist."""
+        logs_path = os.path.join(self._get_site_path(site_name), "logs")
+        os.makedirs(logs_path, exist_ok=True)
+
+    def set_site(self, site_name: str) -> None:
+        """Switch to a different site."""
+        if not site_name:
+            raise ValueError("Site name is required")
+
+        f = get_frappe()
+
+        # If already initialized with this site, do nothing
+        if self._current_site == site_name and self._frappe_initialized:
+            return
+
+        # Clean up previous site
+        if self._frappe_initialized:
+            try:
+                f.destroy()
+            except Exception:
+                pass
+
+        # Ensure logs directory exists
+        self._ensure_site_logs(site_name)
+
+        # Initialize new site
+        self._current_site = site_name
+        os.environ["FRAPPE_SITE"] = site_name
+        f.init(site=site_name, sites_path=self._sites_path)
+        f.connect()
+        self._frappe_initialized = True
+
+    def ensure_initialized(self, site: Optional[str] = None) -> None:
+        """Ensure Frappe is initialized with the specified or default site."""
+        target_site = site or self._current_site or SITE_ARG
+
+        if not target_site:
+            raise ValueError(
+                "No site specified. Set FRAPPE_SITE env or pass site parameter."
+            )
+
+        if self._current_site != target_site or not self._frappe_initialized:
+            self.set_site(target_site)
+
+    def list_sites(self) -> List[str]:
+        """List all available sites."""
+        if not os.path.exists(self._sites_path):
+            return []
+
+        sites = []
+        for item in os.listdir(self._sites_path):
+            site_path = os.path.join(self._sites_path, item)
+            if os.path.isdir(site_path) and os.path.exists(
+                os.path.join(site_path, "site_config.json")
+            ):
+                sites.append(item)
+
+        return sorted(sites)
+
+
+# Global site context
+site_context = SiteContext()
+
+
+# ============================================================
+# TOOL DEFINITIONS
+# ============================================================
 @server.list_tools()
-async def handle_list_tools() -> List[types.Tool]:
-    """List all available tools with configuration-aware descriptions."""
-    ctx = server.request_context
-    print(f"ctx {ctx}")
-
-    config = ctx.lifespan_context["config"]
-    print(f"config {config}")
-
-    return [
-        # Document operations
-        types.Tool(
-            name="list_doctypes",
-            description="List all available document types in ERPNext with module information",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "module": {
-                        "type": "string",
-                        "description": "Filter by specific module (optional)",
-                    }
-                },
-            },
-        ),
-        types.Tool(
-            name="get_document",
-            description="Retrieve a specific document with full details and formatting",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "doctype": {
-                        "type": "string",
-                        "description": "The document type (e.g., 'Customer', 'Sales Invoice')",
-                    },
-                    "name": {"type": "string", "description": "The document name/ID"},
-                    "fields": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Specific fields to retrieve (optional, gets all if not specified)",
-                    },
-                },
-                "required": ["doctype", "name"],
-            },
-        ),
-        types.Tool(
-            name="search_documents",
-            description="Search documents with advanced filtering and pagination",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "doctype": {
-                        "type": "string",
-                        "description": "The document type to search",
-                    },
-                    "query": {"type": "string", "description": "Search query text"},
-                    "filters": {
-                        "type": "object",
-                        "description": "Additional filters as key-value pairs",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "default": config.sql_query_limit,
-                        "description": f"Maximum number of results to return (max: {config.sql_query_limit})",
-                    },
-                    "fields": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Fields to include in results",
-                    },
-                },
-                "required": ["doctype"],
-            },
-        ),
-        # Database operations with config limits
-        types.Tool(
-            name="execute_sql",
-            description=f"Execute SQL queries (SELECT only for security, max {config.sql_query_limit} rows)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "SQL SELECT query to execute",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "default": config.sql_query_limit,
-                        "description": f"Maximum number of rows to return (max: {config.sql_query_limit})",
-                    },
-                },
-                "required": ["query"],
-            },
-        ),
-        # System operations with allowed commands from config
-        types.Tool(
-            name="get_system_info",
-            description="Get comprehensive system information including versions, database details, and platform info",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="bench_command",
-            description=f"Execute safe bench commands: {', '.join(config.allowed_bench_commands.keys())}",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "command": {
-                        "type": "string",
-                        "enum": list(config.allowed_bench_commands.keys()),
-                        "description": f"Allowed commands: {', '.join(config.allowed_bench_commands.keys())}",
-                    },
-                    "args": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Additional command arguments",
-                    },
-                },
-                "required": ["command"],
-            },
-        ),
-        # File operations with config restrictions
-        types.Tool(
-            name="list_files",
-            description=f"List files in allowed directories: {', '.join(config.safe_directories)}",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": f"Directory path (restricted to: {', '.join(config.safe_directories)})",
-                    },
-                    "recursive": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "List files recursively",
-                    },
-                    "pattern": {
-                        "type": "string",
-                        "description": "File pattern to match (e.g., '*.py')",
-                    },
-                },
-                "required": ["path"],
-            },
-        ),
-        types.Tool(
-            name="read_file",
-            description=f"Read files (max {config.max_file_size // (1024*1024)}MB, types: {', '.join(sorted(config.allowed_file_extensions))})",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string", "description": "File path to read"},
-                    "lines": {
-                        "type": "integer",
-                        "description": "Maximum number of lines to read (optional)",
-                    },
-                    "encoding": {
-                        "type": "string",
-                        "default": "utf-8",
-                        "description": "File encoding",
-                    },
-                },
-                "required": ["path"],
-            },
-        ),
-    ]
-
-
-@server.call_tool()
-async def handle_call_tool(
-    name: str, arguments: Dict[str, Any]
-) -> List[types.TextContent]:
-    """Handle tool execution with configuration-aware processing."""
-    ctx = server.request_context
-    print(f"ctx {ctx}")
-
-    try:
-        if name == "list_doctypes":
-            result = await ctx.lifespan_context["document_tools"].list_doctypes(
-                arguments.get("module")
-            )
-        elif name == "get_document":
-            result = await ctx.lifespan_context["document_tools"].get_document(
-                arguments["doctype"], arguments["name"], arguments.get("fields")
-            )
-        elif name == "search_documents":
-            result = await ctx.lifespan_context["document_tools"].search_documents(
-                arguments["doctype"],
-                arguments.get("query"),
-                arguments.get("filters", {}),
-                arguments.get("limit", ctx.lifespan_context["config"].sql_query_limit),
-                arguments.get("fields"),
-            )
-        elif name == "execute_sql":
-            result = await ctx.lifespan_context["database_tools"].execute_sql(
-                arguments["query"],
-                arguments.get("limit", ctx.lifespan_context["config"].sql_query_limit),
-            )
-        elif name == "get_system_info":
-            result = await ctx.lifespan_context["system_tools"].get_system_info()
-        elif name == "bench_command":
-            result = await ctx.lifespan_context["system_tools"].bench_command(
-                arguments["command"], arguments.get("args", [])
-            )
-        elif name == "list_files":
-            result = await ctx.lifespan_context["file_tools"].list_files(
-                arguments["path"],
-                arguments.get("recursive", False),
-                arguments.get("pattern"),
-            )
-        elif name == "read_file":
-            result = await ctx.lifespan_context["file_tools"].read_file(
-                arguments["path"],
-                arguments.get("lines"),
-                arguments.get("encoding", "utf-8"),
-            )
-        else:
-            raise ValueError(f"Unknown tool: {name}")
-
-        return [types.TextContent(type="text", text=str(result))]
-    except Exception as e:
-        error_msg = f"Error executing {name}: {str(e)}"
-        if ctx.lifespan_context["config"].is_development_mode():
-            # In development mode, include more detailed error info
-            import traceback
-
-            error_msg += f"\n\nDevelopment Debug Info:\n{traceback.format_exc()}"
-
-        return [types.TextContent(type="text", text=error_msg)]
-
-
-async def run_server():
-    """Main server run function with configuration."""
-    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            InitializationOptions(
-                server_name=mcp_config.server_name,
-                server_version=mcp_config.server_version,
-                capabilities=server.get_capabilities(
-                    notification_options=NotificationOptions(),
-                    experimental_capabilities={},
-                ),
+async def list_tools() -> ListToolsResult:
+    """List all available tools."""
+    return ListToolsResult(
+        tools=[
+            # === SITE MANAGEMENT ===
+            Tool(
+                name="list_sites",
+                description="List all available Frappe sites on this bench",
+                inputSchema={"type": "object", "properties": {}},
             ),
+            Tool(
+                name="switch_site",
+                description="Switch to a different Frappe site context. Use this before other operations.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "site": {
+                            "type": "string",
+                            "description": "Site name to switch to",
+                        }
+                    },
+                    "required": ["site"],
+                },
+            ),
+            Tool(
+                name="current_site",
+                description="Get the current site name",
+                inputSchema={"type": "object", "properties": {}},
+            ),
+            # === DOCUMENT CRUD ===
+            Tool(
+                name="get_document",
+                description="Get a document by doctype and name",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "doctype": {
+                            "type": "string",
+                            "description": "Document type name",
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Document name or ID",
+                        },
+                        "site": {
+                            "type": "string",
+                            "description": "Optional: Override site for this operation",
+                        },
+                    },
+                    "required": ["doctype", "name"],
+                },
+            ),
+            Tool(
+                name="list_documents",
+                description="List documents with optional filters",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "doctype": {"type": "string"},
+                        "filters": {
+                            "type": "object",
+                            "description": 'Filter dict, e.g. {"status": "Open"}',
+                        },
+                        "fields": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Fields to return",
+                        },
+                        "limit": {"type": "integer", "default": 20},
+                        "order_by": {
+                            "type": "string",
+                            "description": "Order by clause",
+                        },
+                        "site": {"type": "string"},
+                    },
+                    "required": ["doctype"],
+                },
+            ),
+            Tool(
+                name="create_document",
+                description="Create a new document",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "doctype": {"type": "string"},
+                        "data": {
+                            "type": "object",
+                            "description": "Document field values",
+                        },
+                        "site": {"type": "string"},
+                    },
+                    "required": ["doctype", "data"],
+                },
+            ),
+            Tool(
+                name="update_document",
+                description="Update an existing document",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "doctype": {"type": "string"},
+                        "name": {"type": "string"},
+                        "data": {"type": "object", "description": "Fields to update"},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["doctype", "name", "data"],
+                },
+            ),
+            Tool(
+                name="delete_document",
+                description="Delete a document (soft delete via cancel)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "doctype": {"type": "string"},
+                        "name": {"type": "string"},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["doctype", "name"],
+                },
+            ),
+            Tool(
+                name="count_documents",
+                description="Count documents matching filters",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "doctype": {"type": "string"},
+                        "filters": {"type": "object"},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["doctype"],
+                },
+            ),
+            # === DOCTYPE METADATA ===
+            Tool(
+                name="list_doctypes",
+                description="List all DocTypes with optional module filter",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "module": {"type": "string"},
+                        "site": {"type": "string"},
+                    },
+                },
+            ),
+            Tool(
+                name="get_doctype_meta",
+                description="Get DocType metadata (fields, permissions, etc.)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "doctype": {"type": "string"},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["doctype"],
+                },
+            ),
+            # === DATABASE ===
+            Tool(
+                name="execute_sql",
+                description="Execute safe SQL query (SELECT only)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "limit": {"type": "integer", "default": 100},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["query"],
+                },
+            ),
+            Tool(
+                name="get_table_info",
+                description="Get table structure and row count",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "table": {"type": "string"},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["table"],
+                },
+            ),
+            # === SYSTEM INFO ===
+            Tool(
+                name="get_system_info",
+                description="Get system and site information",
+                inputSchema={
+                    "type": "object",
+                    "properties": {"site": {"type": "string"}},
+                },
+            ),
+            Tool(
+                name="get_versions",
+                description="Get installed app versions",
+                inputSchema={
+                    "type": "object",
+                    "properties": {"site": {"type": "string"}},
+                },
+            ),
+            Tool(
+                name="bench_command",
+                description="Execute safe bench commands",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "enum": [
+                                "version",
+                                "status",
+                                "list-apps",
+                                "doctor",
+                                "config",
+                                "show-config",
+                            ],
+                        },
+                        "site": {"type": "string"},
+                    },
+                    "required": ["command"],
+                },
+            ),
+            # === WORKFLOW ===
+            Tool(
+                name="submit_document",
+                description="Submit a document (docstatus 0 → 1)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "doctype": {"type": "string"},
+                        "name": {"type": "string"},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["doctype", "name"],
+                },
+            ),
+            Tool(
+                name="cancel_document",
+                description="Cancel a submitted document",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "doctype": {"type": "string"},
+                        "name": {"type": "string"},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["doctype", "name"],
+                },
+            ),
+            # === SEARCH ===
+            Tool(
+                name="search",
+                description="Search across all doctypes",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "doctype": {"type": "string"},
+                        "limit": {"type": "integer", "default": 10},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["query"],
+                },
+            ),
+            # === FILE OPERATIONS ===
+            Tool(
+                name="read_file",
+                description="Read file contents (safe paths only)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        "lines": {"type": "integer"},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["path"],
+                },
+            ),
+            Tool(
+                name="list_files",
+                description="List files in directory",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        "recursive": {"type": "boolean", "default": False},
+                        "site": {"type": "string"},
+                    },
+                    "required": ["path"],
+                },
+            ),
+        ]
+    )
+
+
+# ============================================================
+# TOOL HANDLERS
+# ============================================================
+@server.call_tool()
+async def call_tool(name: str, arguments: Optional[Dict[str, Any]]) -> CallToolResult:
+    """Handle tool calls with site context management."""
+    try:
+        args = arguments or {}
+
+        # === SITE MANAGEMENT TOOLS ===
+        if name == "list_sites":
+            sites = site_context.list_sites()
+            return CallToolResult(
+                content=[{"type": "text", "text": json.dumps(sites, indent=2)}]
+            )
+
+        if name == "switch_site":
+            site = args.get("site")
+            if not site:
+                return CallToolResult(
+                    content=[
+                        {"type": "text", "text": "Error: site parameter required"}
+                    ],
+                    isError=True,
+                )
+
+            try:
+                site_context.set_site(site)
+                return CallToolResult(
+                    content=[{"type": "text", "text": f"Switched to site: {site}"}]
+                )
+            except Exception as e:
+                return CallToolResult(
+                    content=[{"type": "text", "text": f"Error switching to site: {e}"}],
+                    isError=True,
+                )
+
+        if name == "current_site":
+            return CallToolResult(
+                content=[{"type": "text", "text": site_context.get_current_site()}]
+            )
+
+        # === ALL OTHER TOOLS: Ensure site is initialized ===
+        target_site = args.get("site")
+        site_context.ensure_initialized(target_site)
+
+        f = get_frappe()
+
+        # === DOCUMENT CRUD TOOLS ===
+        if name == "get_document":
+            doctype = args["doctype"]
+            doc_name = args["name"]
+
+            doc = f.get_doc(doctype, doc_name)
+            return CallToolResult(
+                content=[
+                    {
+                        "type": "text",
+                        "text": json.dumps(doc.as_dict(), indent=2, default=str),
+                    }
+                ]
+            )
+
+        if name == "list_documents":
+            doctype = args["doctype"]
+            filters = args.get("filters", {})
+            fields = args.get("fields", ["name"])
+            limit = args.get("limit", 20)
+            order_by = args.get("order_by", "modified desc")
+
+            docs = f.get_all(
+                doctype, filters=filters, fields=fields, limit=limit, order_by=order_by
+            )
+            return CallToolResult(
+                content=[
+                    {"type": "text", "text": json.dumps(docs, indent=2, default=str)}
+                ]
+            )
+
+        if name == "create_document":
+            doctype = args["doctype"]
+            data = args["data"]
+
+            doc = f.new_doc(doctype)
+            doc.update(data)
+            doc.insert()
+            f.db.commit()
+
+            return CallToolResult(
+                content=[{"type": "text", "text": f"Created {doctype} {doc.name}"}]
+            )
+
+        if name == "update_document":
+            doctype = args["doctype"]
+            doc_name = args["name"]
+            data = args["data"]
+
+            doc = f.get_doc(doctype, doc_name)
+            doc.update(data)
+            doc.save()
+            f.db.commit()
+
+            return CallToolResult(
+                content=[{"type": "text", "text": f"Updated {doctype} {doc_name}"}]
+            )
+
+        if name == "delete_document":
+            doctype = args["doctype"]
+            doc_name = args["name"]
+
+            doc = f.get_doc(doctype, doc_name)
+            if doc.docstatus == 1:
+                doc.cancel()
+            else:
+                doc.delete()
+            f.db.commit()
+
+            return CallToolResult(
+                content=[{"type": "text", "text": f"Deleted {doctype} {doc_name}"}]
+            )
+
+        if name == "count_documents":
+            doctype = args["doctype"]
+            filters = args.get("filters", {})
+
+            count = f.db.count(doctype, filters)
+            return CallToolResult(content=[{"type": "text", "text": str(count)}])
+
+        # === DOCTYPE METADATA ===
+        if name == "list_doctypes":
+            module_filter = args.get("module")
+
+            filters = {"custom": 0, "istable": 0}
+            if module_filter:
+                filters["module"] = module_filter
+
+            doctypes = f.get_all(
+                "DocType",
+                filters=filters,
+                fields=["name", "module", "description", "is_submittable"],
+                order_by="module, name",
+            )
+
+            return CallToolResult(
+                content=[{"type": "text", "text": json.dumps(doctypes, indent=2)}]
+            )
+
+        if name == "get_doctype_meta":
+            doctype = args["doctype"]
+
+            meta = f.get_meta(doctype)
+            fields = [
+                {
+                    "name": f.fieldname,
+                    "label": f.label,
+                    "type": f.fieldtype,
+                    "reqd": f.reqd,
+                }
+                for f in meta.fields
+            ]
+
+            return CallToolResult(
+                content=[
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {"name": doctype, "fields": fields}, indent=2
+                        ),
+                    }
+                ]
+            )
+
+        # === DATABASE ===
+        if name == "execute_sql":
+            query = args["query"]
+            limit = args.get("limit", 100)
+
+            # Security: only SELECT
+            query_upper = query.strip().upper()
+            if not query_upper.startswith("SELECT"):
+                return CallToolResult(
+                    content=[
+                        {"type": "text", "text": "Error: Only SELECT queries allowed"}
+                    ],
+                    isError=True,
+                )
+
+            result = f.db.sql(query, as_dict=True)
+            if len(result) > limit:
+                result = result[:limit]
+
+            return CallToolResult(
+                content=[
+                    {"type": "text", "text": json.dumps(result, indent=2, default=str)}
+                ]
+            )
+
+        if name == "get_table_info":
+            table = args["table"]
+            if not table.startswith("tab"):
+                table = f"tab{table}"
+
+            columns = f.db.sql(f"DESCRIBE `{table}`", as_dict=True)
+            count = f.db.sql(f"SELECT COUNT(*) as cnt FROM `{table}`", as_dict=True)[
+                0
+            ].cnt
+
+            return CallToolResult(
+                content=[
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {"table": table, "columns": columns, "row_count": count},
+                            indent=2,
+                        ),
+                    }
+                ]
+            )
+
+        # === SYSTEM INFO ===
+        if name == "get_system_info":
+            site_name = site_context.get_current_site()
+            db_info = {
+                "name": f.conf.db_name,
+                "version": f.db.sql("SELECT VERSION() as v", as_dict=True)[0].v,
+            }
+
+            return CallToolResult(
+                content=[
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "site": site_name,
+                                "db_name": db_info["name"],
+                                "db_version": db_info["version"],
+                            },
+                            indent=2,
+                        ),
+                    }
+                ]
+            )
+
+        if name == "get_versions":
+            from frappe.utils.change_log import get_versions
+
+            versions = get_versions()
+            return CallToolResult(
+                content=[{"type": "text", "text": json.dumps(versions, indent=2)}]
+            )
+
+        if name == "bench_command":
+            import subprocess
+
+            command = args["command"]
+            allowed = [
+                "version",
+                "status",
+                "list-apps",
+                "doctor",
+                "config",
+                "show-config",
+            ]
+
+            if command not in allowed:
+                return CallToolResult(
+                    content=[
+                        {"type": "text", "text": f"Command not allowed: {command}"}
+                    ],
+                    isError=True,
+                )
+
+            result = subprocess.run(
+                ["bench", command],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=BENCH_PATH,
+            )
+
+            return CallToolResult(
+                content=[
+                    {
+                        "type": "text",
+                        "text": result.stdout or result.stderr or "Command executed",
+                    }
+                ]
+            )
+
+        # === WORKFLOW ===
+        if name == "submit_document":
+            doctype = args["doctype"]
+            doc_name = args["name"]
+
+            doc = f.get_doc(doctype, doc_name)
+            doc.submit()
+            f.db.commit()
+
+            return CallToolResult(
+                content=[{"type": "text", "text": f"Submitted {doctype} {doc_name}"}]
+            )
+
+        if name == "cancel_document":
+            doctype = args["doctype"]
+            doc_name = args["name"]
+
+            doc = f.get_doc(doctype, doc_name)
+            doc.cancel()
+            f.db.commit()
+
+            return CallToolResult(
+                content=[{"type": "text", "text": f"Cancelled {doctype} {doc_name}"}]
+            )
+
+        # === SEARCH ===
+        if name == "search":
+            query_text = args["query"]
+            doctype = args.get("doctype")
+            limit = args.get("limit", 10)
+
+            if doctype:
+                meta = f.get_meta(doctype)
+                title_field = meta.get_title_field() or "name"
+
+                results = f.get_all(
+                    doctype,
+                    filters={title_field: ["like", f"%{query_text}%"]},
+                    fields=["name", title_field],
+                    limit=limit,
+                )
+            else:
+                # Search across all doctypes
+                results = []
+                for dt in f.get_all("DocType", filters={"custom": 0}, pluck="name")[
+                    :20
+                ]:
+                    try:
+                        meta = f.get_meta(dt)
+                        title_field = meta.get_title_field() or "name"
+                        hits = f.get_all(
+                            dt,
+                            filters={title_field: ["like", f"%{query_text}%"]},
+                            fields=["name", title_field],
+                            limit=3,
+                        )
+                        for h in hits:
+                            results.append(
+                                {
+                                    "doctype": dt,
+                                    "name": h.name,
+                                    "title": h.get(title_field),
+                                }
+                            )
+                    except Exception:
+                        pass
+
+            return CallToolResult(
+                content=[
+                    {
+                        "type": "text",
+                        "text": json.dumps(results[:limit], indent=2, default=str),
+                    }
+                ]
+            )
+
+        # === FILE OPERATIONS ===
+        if name == "read_file":
+            file_path = args["path"]
+
+            # Security: check path - only allow safe directories
+            safe_dirs = ["sites", "apps", "logs", "config"]
+            path_obj = Path(file_path)
+            parts = path_obj.parts if path_obj.is_absolute() else path_obj.parts
+
+            if not any(p in safe_dirs for p in parts):
+                return CallToolResult(
+                    content=[
+                        {
+                            "type": "text",
+                            "text": f"Path not allowed. Safe dirs: {safe_dirs}",
+                        }
+                    ],
+                    isError=True,
+                )
+
+            # Resolve to absolute path
+            if path_obj.is_absolute():
+                full_path = path_obj
+            else:
+                full_path = Path(BENCH_PATH) / path_obj
+
+            if not full_path.exists():
+                return CallToolResult(
+                    content=[{"type": "text", "text": f"File not found: {file_path}"}],
+                    isError=True,
+                )
+
+            lines = args.get("lines")
+            with open(full_path, "r") as fh:
+                content = (
+                    fh.read()
+                    if not lines
+                    else "\n".join(fh.read().splitlines()[:lines])
+                )
+
+            return CallToolResult(content=[{"type": "text", "text": content}])
+
+        if name == "list_files":
+            dir_path = args["path"]
+            recursive = args.get("recursive", False)
+
+            # Security check
+            safe_dirs = ["sites", "apps", "logs", "config"]
+            path_obj = Path(dir_path)
+            parts = path_obj.parts if path_obj.is_absolute() else path_obj.parts
+
+            if not any(p in safe_dirs for p in parts):
+                return CallToolResult(
+                    content=[
+                        {
+                            "type": "text",
+                            "text": f"Path not allowed. Safe dirs: {safe_dirs}",
+                        }
+                    ],
+                    isError=True,
+                )
+
+            # Resolve to absolute path
+            if path_obj.is_absolute():
+                full_path = path_obj
+            else:
+                full_path = Path(BENCH_PATH) / path_obj
+
+            if not full_path.exists() or not full_path.is_dir():
+                return CallToolResult(
+                    content=[{"type": "text", "text": f"Not a directory: {dir_path}"}],
+                    isError=True,
+                )
+
+            items = list(full_path.rglob("*") if recursive else full_path.iterdir())
+            file_list = [
+                {
+                    "name": str(i.relative_to(full_path)),
+                    "type": "dir" if i.is_dir() else "file",
+                }
+                for i in items[:100]
+            ]
+
+            return CallToolResult(
+                content=[{"type": "text", "text": json.dumps(file_list, indent=2)}]
+            )
+
+        # Unknown tool
+        return CallToolResult(
+            content=[{"type": "text", "text": f"Unknown tool: {name}"}], isError=True
+        )
+
+    except Exception as e:
+        return CallToolResult(
+            content=[
+                {"type": "text", "text": f"Error: {str(e)}\n{traceback.format_exc()}"}
+            ],
+            isError=True,
+        )
+
+
+# ============================================================
+# MAIN ENTRY POINT
+# ============================================================
+async def main():
+    """Main entry point - runs the MCP stdio server."""
+    options = InitializationOptions(
+        server_name="erpnext-mcp-server",
+        server_version="1.0.0",
+        capabilities=ServerCapabilities(tools=ToolsCapability()),
+    )
+
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream=read_stream,
+            write_stream=write_stream,
+            initialization_options=options,
         )
 
 
 if __name__ == "__main__":
-    asyncio.run(run_server())
+    asyncio.run(main())
