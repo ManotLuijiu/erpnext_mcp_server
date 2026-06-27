@@ -31,6 +31,10 @@ REQUIRED_FIELDS = ("type",)
 # Recommended fields (warn if missing).
 RECOMMENDED_FIELDS = ("title", "description", "tags")
 
+# Optional but recommended — warn only, not required (per spec §4.1).
+# `resource` is optional for abstract concepts.
+RECOMMENDED_OPTIONAL_FIELDS = ("resource",)
+
 
 class OKFValidationError(ValueError):
     """Raised for hard validation errors."""
@@ -87,15 +91,23 @@ def validate_concept(concept: dict[str, Any], path: Path) -> tuple[list[str], li
 
     fm = concept.get("frontmatter") or {}
 
-    # Required fields
+    # Required fields (blocking)
     for field in REQUIRED_FIELDS:
         if field not in fm or not fm[field]:
             errors.append(f"[{path.name}] missing required frontmatter field: '{field}'")
 
-    # Recommended fields (warn only)
+    # Recommended fields (warn only — should have these for best UX)
     for field in RECOMMENDED_FIELDS:
         if field not in fm:
             warnings.append(f"[{path.name}] missing recommended field: '{field}'")
+
+    # Optional-but-recommended fields (warn but don't block — spec §4.1)
+    # `resource` is optional for abstract concepts (workflows, best practices).
+    for field in RECOMMENDED_OPTIONAL_FIELDS:
+        if field not in fm:
+            warnings.append(
+                f"[{path.name}] optional field '{field}' not set (recommended for concepts describing physical assets)"
+            )
 
     # Tags must be a list if present
     if "tags" in fm and not isinstance(fm["tags"], list):
@@ -126,15 +138,19 @@ def validate_bundle(bundle_root: str | Path) -> dict[str, Any]:
     # Find all .md files
     md_files = list(root.rglob("*.md"))
     index_path = root / "index.md"
+    log_path = root / "log.md"
     index_present = index_path.exists()
 
     if not index_present:
         warnings.append("Bundle is missing root index.md (auto-regenerate with bundle.generate_index)")
 
-    # Validate each concept (skip the root index.md per OKF spec — frontmatter optional there)
+    # Validate each concept (skip the root index.md and log.md per OKF spec —
+    # index has optional frontmatter (only okf_version required), log.md has prose only)
     concept_count = 0
     for md in md_files:
         if md.resolve() == index_path.resolve():
+            continue
+        if md.resolve() == log_path.resolve():
             continue
         concept_count += 1
         parsed = parse_concept_safe(md)
@@ -150,6 +166,9 @@ def validate_bundle(bundle_root: str | Path) -> dict[str, Any]:
         idx = parse_concept_safe(index_path)
         if idx and "okf_version" not in (idx.get("frontmatter") or {}):
             warnings.append("Bundle index.md missing 'okf_version' field")
+
+    # log.md is allowed to be missing entirely (it's optional per OKF spec §7)
+    # but if present, just verify it's a real .md file (no frontmatter validation).
 
     return {
         "valid": len(errors) == 0,

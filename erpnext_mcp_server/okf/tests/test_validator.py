@@ -89,7 +89,19 @@ class TestValidateConcept:
             __import__("pathlib").Path("test.md"),
         )
         assert e == []
-        assert w == []   # has type + title + description + tags
+        # Now `resource` is soft-warned (per spec §4.1 it's optional)
+        assert any("resource" in warn for warn in w)
+
+    def test_resource_optional_no_error(self):
+        """Spec §4.1: `resource` is optional for abstract concepts."""
+        from erpnext_mcp_server.okf.validator import validate_concept
+        # Concept WITHOUT resource — should NOT error, only warn
+        e, w = validate_concept(
+            {"frontmatter": {"type": "Test", "title": "X", "description": "Y", "tags": ["t"]}},
+            __import__("pathlib").Path("test.md"),
+        )
+        assert e == []  # no errors
+        assert any("resource" in warn and "optional" in warn for warn in w)
 
     def test_missing_type_errors(self):
         e, w = validate_concept(
