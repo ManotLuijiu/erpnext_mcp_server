@@ -23,4 +23,6 @@ erpnext_mcp_server/public/ai-chatbot-client/assets/*
 erpnext_mcp_server/okf/bundles/
 erpnext_mcp_server/okf/_export_initial.py
 
+package-lock.json
+
 harness/
