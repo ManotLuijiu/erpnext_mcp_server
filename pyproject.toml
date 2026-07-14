@@ -16,7 +16,7 @@ dependencies = [
     "duckdb>=1.5.4",
     "openai",
     "ipykernel",
-    "httpx<0.28",
+    "httpx<0.29",
     "markdownify>=0.13.1",
     "protego>=0.3.1",
     "readabilipy>=0.2.0",
