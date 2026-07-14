@@ -22,3 +22,5 @@ erpnext_mcp_server/public/ai-chatbot-client/assets/*
 # OKF bundle output (regeneratable; not source)
 erpnext_mcp_server/okf/bundles/
 erpnext_mcp_server/okf/_export_initial.py
+
+harness/

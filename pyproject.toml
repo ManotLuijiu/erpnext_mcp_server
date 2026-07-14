@@ -13,6 +13,7 @@ dependencies = [
     "mcp>=1.9.2",
     "anthropic>=0.40.0",
     "python-dotenv",
+    "duckdb>=1.5.4",
     "openai",
     "ipykernel",
     "httpx<0.28",
