@@ -1,6 +1,6 @@
 {
   "name": "erpnext_mcp_server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "## ERPNext MCP Server",
   "main": "index.js",
   "scripts": {
@@ -39,5 +39,12 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "vue-router": "4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.7",
+    "@commitlint/cli": "^20.3.1",
+    "@commitlint/config-conventional": "^20.3.1",
+    "husky": "^9.1.7",
+    "standard-version": "^9.5.0"
   }
 }
