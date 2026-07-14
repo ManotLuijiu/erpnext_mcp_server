@@ -1,0 +1,62 @@
+version: 2
+updates:
+  # Python dependencies (pyproject.toml)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 8
+    target-branch: "develop"
+    reviewers:
+      - "ManotLuijiu"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      # AI/ML dependencies
+      ai-dependencies:
+        patterns:
+          - "openai*"
+          - "anthropic*"
+          - "langchain*"
+          - "mem0ai*"
+        update-types:
+          - "minor"
+          - "patch"
+      # MCP and tooling
+      mcp-dependencies:
+        patterns:
+          - "mcp*"
+          - "duckdb*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "10:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 3
+    target-branch: "develop"
+    reviewers:
+      - "ManotLuijiu"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
