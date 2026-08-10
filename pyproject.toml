@@ -42,7 +42,7 @@ dependencies = [
 mcp-server-fetch = "mcp_server_fetch:main"
 
 [build-system]
-requires = ["flit_core >=3.4,<4"]
+requires = ["flit_core >=3.4,<5"]
 build-backend = "flit_core.buildapi"
 
 # These dependencies are only installed when developer mode is enabled
